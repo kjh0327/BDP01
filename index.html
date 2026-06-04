@@ -1,0 +1,4696 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>몬테카를로 시뮬레이션 발표자료</title>
+
+  <!-- =========================================================
+    [외부 라이브러리]
+    - Pretendard: 한글 발표자료용 웹폰트
+    - Chart.js: 발표 중 차트 시각화
+    ========================================================= -->
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* =========================================================
+      1. 디자인 변수
+      - 색상, 여백, 글자 크기를 여기서 수정하면 전체 슬라이드에 반영됩니다.
+      ========================================================= */
+    :root {
+      --bg: #f6f8fc;
+      --surface: #ffffff;
+      --surface-soft: #eef4ff;
+      --ink: #14213d;
+      --muted: #637083;
+      --primary: #2656d9;
+      --primary-dark: #173a99;
+      --teal: #0ea5a8;
+      --orange: #f97316;
+      --red: #ef4444;
+      --green: #22a866;
+      --line: #dbe4f0;
+      --shadow: 0 24px 70px rgba(20, 33, 61, 0.14);
+      --radius-xl: 34px;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --slide-pad: clamp(48px, 5vw, 82px);
+      --title-size: clamp(48px, 5.6vw, 82px);
+      --h2-size: clamp(36px, 4vw, 58px);
+      --body-size: clamp(22px, 2vw, 30px);
+      --small-size: clamp(17px, 1.45vw, 22px);
+      --tiny-size: clamp(14px, 1vw, 17px);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    /* =========================================================
+      2. 기본 레이아웃
+      - 스크롤되는 웹페이지가 아니라, 한 화면에 하나의 슬라이드만 보이도록 구성합니다.
+      ========================================================= */
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 10%, rgba(38, 86, 217, 0.13), transparent 34%),
+        radial-gradient(circle at 90% 18%, rgba(14, 165, 168, 0.12), transparent 30%),
+        linear-gradient(135deg, #f8fbff 0%, #eef3fb 100%);
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding: var(--slide-pad);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 30px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(36px) scale(0.985);
+      transition: opacity 380ms ease, transform 380ms ease, visibility 380ms ease;
+      background:
+        linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(246, 248, 252, 0.90));
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      right: -130px;
+      top: -130px;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(38, 86, 217, 0.12), transparent 68%);
+      pointer-events: none;
+    }
+
+    .slide::after {
+      content: "";
+      position: absolute;
+      left: -160px;
+      bottom: -180px;
+      width: 460px;
+      height: 460px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(14, 165, 168, 0.10), transparent 70%);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0) scale(1);
+      z-index: 2;
+    }
+
+    .cover-slide {
+      grid-template-rows: 1fr;
+      align-items: center;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92));
+    }
+
+    .cover-slide::before,
+    .cover-slide::after {
+      display: none;
+    }
+
+    .cover-layout {
+      position: relative;
+      z-index: 1;
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 44px;
+    }
+
+    .cover-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      color: var(--muted);
+      font-size: var(--tiny-size);
+      font-weight: 850;
+      letter-spacing: -0.01em;
+    }
+
+    .cover-main {
+      display: grid;
+      align-content: center;
+      gap: 28px;
+      max-width: 1120px;
+    }
+
+    .cover-eyebrow {
+      color: var(--primary);
+      font-size: clamp(22px, 2vw, 30px);
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .cover-title {
+      max-width: 980px;
+      font-size: clamp(74px, 8vw, 128px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .cover-subtitle {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: clamp(26px, 2.4vw, 38px);
+      line-height: 1.36;
+      letter-spacing: -0.03em;
+      font-weight: 750;
+    }
+
+    .cover-rule {
+      width: min(580px, 54vw);
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--teal), var(--orange));
+    }
+
+    .slide-header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 26px;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      color: var(--primary);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      font-size: var(--small-size);
+    }
+
+    .kicker::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--primary);
+      box-shadow: 0 0 0 8px rgba(38, 86, 217, 0.10);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+      word-break: keep-all;
+    }
+
+    h1 {
+      font-size: var(--title-size);
+      line-height: 1.02;
+      letter-spacing: -0.055em;
+      font-weight: 900;
+    }
+
+    h2 {
+      font-size: var(--h2-size);
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+      font-weight: 900;
+    }
+
+    h3 {
+      font-size: clamp(25px, 2.25vw, 34px);
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+      font-weight: 850;
+    }
+
+    .lead {
+      margin-top: 22px;
+      max-width: 900px;
+      color: var(--muted);
+      font-size: var(--body-size);
+      line-height: 1.45;
+      letter-spacing: -0.025em;
+    }
+
+    .body {
+      font-size: var(--body-size);
+      line-height: 1.46;
+      color: var(--muted);
+      letter-spacing: -0.025em;
+    }
+
+    .small {
+      font-size: var(--small-size);
+      line-height: 1.5;
+      color: var(--muted);
+      letter-spacing: -0.02em;
+    }
+
+    .tiny {
+      font-size: var(--tiny-size);
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      min-height: 0;
+      display: grid;
+      align-items: center;
+      gap: 26px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .two-col.wide-left {
+      grid-template-columns: 1.18fr 0.82fr;
+    }
+
+    .two-col.wide-right {
+      grid-template-columns: 0.86fr 1.14fr;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .four-col {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .limitation-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .limitation-grid .card {
+      padding: 18px;
+    }
+
+    .limitation-grid .mini-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      border-radius: 16px;
+      font-size: 22px;
+    }
+
+    .limitation-grid h3 {
+      font-size: clamp(20px, 1.35vw, 25px);
+    }
+
+    .limitation-grid .small {
+      margin-top: 8px;
+      font-size: clamp(15px, 0.98vw, 18px);
+      line-height: 1.42;
+    }
+
+    .model-fix-card {
+      margin-top: 16px;
+      padding: 22px 24px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(219, 228, 240, 0.98);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 30px;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card.flat {
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .card.soft {
+      background: linear-gradient(145deg, #ffffff 0%, #f2f7ff 100%);
+    }
+
+    .card.dark-blue {
+      color: #ffffff;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 38%),
+        linear-gradient(145deg, #173a99 0%, #14213d 100%);
+      border: 0;
+    }
+
+    .card.dark-blue .small,
+    .card.dark-blue .body,
+    .card.dark-blue .tiny {
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: var(--primary-dark);
+      font-weight: 800;
+      font-size: var(--small-size);
+      letter-spacing: -0.02em;
+    }
+
+    .pill.teal {
+      background: rgba(14, 165, 168, 0.12);
+      color: #087476;
+    }
+
+    .pill.orange {
+      background: rgba(249, 115, 22, 0.12);
+      color: #b45309;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: rgba(20, 33, 61, 0.06);
+      color: var(--muted);
+      font-size: var(--tiny-size);
+      font-weight: 800;
+    }
+
+    .formula {
+      display: inline-block;
+      width: 100%;
+      padding: 22px 26px;
+      border-radius: var(--radius-md);
+      background: #f3f7ff;
+      border: 1px solid #dce8ff;
+      color: var(--primary-dark);
+      font-family: var(--mono);
+      font-size: clamp(22px, 2.05vw, 31px);
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      white-space: normal;
+    }
+
+    .formula.big {
+      font-size: clamp(27px, 2.75vw, 42px);
+      text-align: center;
+      padding: 30px;
+    }
+
+    .highlight {
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .danger {
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .teal {
+      color: var(--teal);
+      font-weight: 900;
+    }
+
+    .orange {
+      color: var(--orange);
+      font-weight: 900;
+    }
+
+    /* =========================================================
+      3. 시각화 컴포넌트
+      - CSS 도형, 다이어그램, 차트 영역
+      ========================================================= */
+    .hero-visual {
+      min-height: 480px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(38, 86, 217, 0.14), transparent 26%),
+        radial-gradient(circle at 76% 80%, rgba(14, 165, 168, 0.14), transparent 32%),
+        linear-gradient(145deg, #ffffff, #eff5ff);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .path-svg {
+      width: min(88%, 620px);
+      height: auto;
+      filter: drop-shadow(0 18px 30px rgba(20, 33, 61, 0.10));
+    }
+
+    .path-svg .path {
+      fill: none;
+      stroke-width: 7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.76;
+      stroke-dasharray: 760;
+      stroke-dashoffset: 760;
+      animation: drawPath 1800ms ease forwards;
+    }
+
+    .path-svg .path:nth-child(2) { animation-delay: 180ms; }
+    .path-svg .path:nth-child(3) { animation-delay: 320ms; }
+    .path-svg .path:nth-child(4) { animation-delay: 480ms; }
+    .path-svg .path:nth-child(5) { animation-delay: 620ms; }
+
+    @keyframes drawPath {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .diagram-flow {
+      display: grid;
+      grid-template-columns: 1fr 54px 1fr 54px 1fr;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .flow-box {
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 44px rgba(20, 33, 61, 0.09);
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 900;
+    }
+
+    .mini-icon {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 18px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: #eef4ff;
+      color: var(--primary);
+      font-size: 34px;
+      font-weight: 900;
+    }
+
+    .mini-icon.teal-bg {
+      background: rgba(14, 165, 168, 0.12);
+      color: var(--teal);
+    }
+
+    .mini-icon.orange-bg {
+      background: rgba(249, 115, 22, 0.12);
+      color: var(--orange);
+    }
+
+    .metric {
+      display: grid;
+      gap: 8px;
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      border: 1px solid var(--line);
+    }
+
+    .metric .value {
+      font-size: clamp(34px, 4vw, 54px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: var(--small-size);
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+
+    .chart-shell {
+      width: 100%;
+      height: min(46vh, 430px);
+      min-height: 310px;
+      padding: 22px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .chart-shell.tall {
+      height: min(54vh, 520px);
+    }
+
+    .result-graph-stage {
+      display: grid;
+      place-items: center;
+      min-height: min(69vh, 680px);
+    }
+
+    .result-graph-frame {
+      width: min(86vw, 1320px);
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .result-graph-frame img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+    }
+
+    .lln-explain-grid {
+      display: grid;
+      grid-template-columns: 0.82fr 1.18fr;
+      gap: 34px;
+      align-items: end;
+    }
+
+    .lln-slide .slide-header h2 {
+      font-size: clamp(64px, 7.4vw, 108px);
+      line-height: 0.96;
+      letter-spacing: -0.06em;
+    }
+
+    .lln-slide .lead {
+      max-width: 1120px;
+      color: #05070d;
+      font-weight: 850;
+      line-height: 1.52;
+    }
+
+    .law-formula-card {
+      display: grid;
+      place-items: center;
+      min-height: 250px;
+      padding: 34px;
+      border-radius: 4px;
+      background: #030303;
+      box-shadow: 0 22px 54px rgba(15, 23, 42, 0.22);
+      color: #ffffff;
+      font-family: "Times New Roman", Georgia, serif;
+      font-size: clamp(40px, 4.2vw, 66px);
+      font-style: italic;
+      line-height: 1.08;
+      text-align: center;
+    }
+
+    .law-formula-card .frac {
+      display: inline-grid;
+      grid-template-rows: auto 2px auto;
+      align-items: center;
+      margin: 0 10px;
+      vertical-align: middle;
+      font-size: 0.88em;
+      line-height: 1;
+    }
+
+    .law-formula-card .frac::before {
+      content: "";
+      grid-row: 2;
+      height: 2px;
+      background: #ffffff;
+    }
+
+    .law-formula-card .frac span:first-child {
+      grid-row: 1;
+    }
+
+    .law-formula-card .frac span:last-child {
+      grid-row: 3;
+    }
+
+    .law-formula-card .sigma {
+      display: inline-block;
+      padding: 0 8px;
+      font-size: 1.28em;
+      transform: translateY(8px);
+    }
+
+    .lln-chart-shell {
+      height: min(48vh, 480px);
+      min-height: 350px;
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .theory-note {
+      margin-top: 18px;
+      padding: 20px 22px;
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 36px rgba(20, 33, 61, 0.08);
+    }
+
+    .theory-note h3 {
+      font-size: clamp(22px, 1.7vw, 30px);
+    }
+
+    .theory-note p {
+      margin-top: 10px;
+    }
+
+    .theory-formula {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #f3f7ff;
+      border: 1px solid #dce8ff;
+      color: var(--primary-dark);
+      font-family: var(--mono);
+      font-size: clamp(20px, 1.45vw, 27px);
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .coin-sequence-slide .slide-header {
+      min-height: 0;
+    }
+
+    .coin-sequence-slide h2 {
+      max-width: 1180px;
+    }
+
+    .coin-sequence-slide {
+      gap: 16px;
+    }
+
+    .coin-sequence-slide .kicker {
+      margin-bottom: 0;
+    }
+
+    .coin-sequence-slide .content {
+      align-items: stretch;
+    }
+
+    .coin-sequence {
+      position: relative;
+      min-height: min(74vh, 700px);
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(to right, rgba(38, 86, 217, 0.08), transparent 42%, rgba(14, 165, 168, 0.08)),
+        #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .coin-sequence::after {
+      content: "";
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 46px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(20, 33, 61, 0.10);
+      filter: blur(1px);
+    }
+
+    .coin-field {
+      position: absolute;
+      inset: 58px;
+      display: grid;
+      place-content: center;
+      gap: var(--coin-gap, 18px);
+      z-index: 2;
+    }
+
+    .coin-field.ten {
+      grid-template-columns: repeat(5, 96px);
+      grid-auto-rows: 96px;
+    }
+
+    .coin-field.hundred {
+      grid-template-columns: repeat(10, 42px);
+      grid-auto-rows: 42px;
+      --coin-gap: 6px;
+    }
+
+    .coin-field.many {
+      inset: 34px -150vw 34px -18vw;
+      grid-template-columns: repeat(70, 40px);
+      grid-auto-rows: 40px;
+      justify-content: start;
+      align-content: center;
+      --coin-gap: 7px;
+    }
+
+    .seq-coin {
+      position: relative;
+      width: var(--coin-size, 84px);
+      height: var(--coin-size, 84px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.58) 0 12%, transparent 13%),
+        radial-gradient(circle at 50% 50%, rgba(255, 247, 191, 0.92) 0 43%, transparent 44%),
+        conic-gradient(from 18deg, #facc15, #f59e0b, #fde68a, #d97706, #facc15);
+      border: max(3px, calc(var(--coin-size, 84px) * 0.055)) solid #d99a18;
+      color: #6b2a0b;
+      font-size: calc(var(--coin-size, 84px) * 0.32);
+      font-weight: 950;
+      line-height: 1;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.62);
+      box-shadow: 0 14px 30px rgba(20, 33, 61, 0.22);
+      opacity: 0;
+      overflow: hidden;
+      isolation: isolate;
+      transform-style: preserve-3d;
+      animation-delay: var(--delay, 0ms);
+    }
+
+    .seq-coin::before {
+      content: "";
+      position: absolute;
+      inset: 14%;
+      z-index: -1;
+      border-radius: inherit;
+      border: max(2px, calc(var(--coin-size, 84px) * 0.035)) solid rgba(126, 58, 10, 0.28);
+      background:
+        radial-gradient(circle at 50% 30%, rgba(126, 58, 10, 0.18) 0 8%, transparent 9%),
+        linear-gradient(90deg, transparent 0 34%, rgba(126, 58, 10, 0.16) 35% 38%, transparent 39% 61%, rgba(126, 58, 10, 0.16) 62% 65%, transparent 66%);
+      box-shadow: inset 0 0 0 max(2px, calc(var(--coin-size, 84px) * 0.035)) rgba(255, 255, 255, 0.28);
+    }
+
+    .seq-coin::after {
+      content: attr(data-face);
+      position: absolute;
+      left: 50%;
+      bottom: 16%;
+      transform: translateX(-50%);
+      color: rgba(107, 42, 11, 0.78);
+      font-size: calc(var(--coin-size, 84px) * 0.14);
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .hundred .seq-coin {
+      --coin-size: 42px;
+      --toss-start: -96px;
+      --toss-mid: -14px;
+      font-size: 13px;
+      box-shadow: 0 7px 14px rgba(20, 33, 61, 0.15);
+    }
+
+    .many .seq-coin {
+      --coin-size: 40px;
+      font-size: 0;
+      opacity: 1;
+      box-shadow: 0 6px 12px rgba(20, 33, 61, 0.13);
+    }
+
+    .seq-coin.tail {
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.54) 0 12%, transparent 13%),
+        radial-gradient(circle at 50% 50%, rgba(254, 240, 138, 0.78) 0 43%, transparent 44%),
+        conic-gradient(from 58deg, #fbbf24, #d97706, #fde68a, #f59e0b, #fbbf24);
+      border-color: #d99a18;
+      color: #6b2a0b;
+    }
+
+    .seq-coin.tail::before {
+      background:
+        repeating-conic-gradient(from 0deg, rgba(126, 58, 10, 0.18) 0 12deg, transparent 12deg 28deg),
+        radial-gradient(circle at 50% 50%, transparent 0 52%, rgba(126, 58, 10, 0.16) 53% 56%, transparent 57%);
+    }
+
+    .motion-ready .arrange .seq-coin,
+    .motion-ready .many .seq-coin {
+      animation-name: coinArrange;
+      animation-duration: 760ms;
+      animation-timing-function: cubic-bezier(.2,.82,.2,1);
+      animation-fill-mode: forwards;
+    }
+
+    .motion-ready .result .seq-coin {
+      animation-name: coinResult;
+      animation-duration: 1100ms;
+      animation-timing-function: cubic-bezier(.16,.78,.22,1);
+      animation-fill-mode: forwards;
+    }
+
+    .motion-ready .coin-field.many {
+      animation: cameraSweep 9800ms linear infinite;
+    }
+
+    .motion-ready .many .seq-coin {
+      animation: none;
+      opacity: 1;
+    }
+
+    .slide:not(.active) .seq-coin,
+    .slide:not(.active) .coin-field.many,
+    .slide:not(.active) .prob-graph-line,
+    .slide:not(.active) .prob-point,
+    .slide:not(.active) .prob-bar-fill {
+      animation-play-state: paused;
+    }
+
+    @keyframes coinArrange {
+      0% {
+        opacity: 0;
+        transform: translateY(-78px) scale(0.52) rotateZ(-20deg);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotateZ(0deg);
+      }
+    }
+
+    @keyframes coinResult {
+      0% {
+        opacity: 0;
+        transform: translateY(var(--toss-start, -170px)) rotateY(0deg) rotateZ(-12deg) scale(0.72);
+      }
+      52% {
+        opacity: 1;
+        transform: translateY(var(--toss-mid, -22px)) rotateY(900deg) rotateZ(18deg) scale(1.04);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) rotateY(1440deg) rotateZ(0deg) scale(1);
+      }
+    }
+
+    @keyframes cameraSweep {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-72vw); }
+    }
+
+    .sequence-badge {
+      position: absolute;
+      left: 34px;
+      top: 30px;
+      z-index: 4;
+      display: inline-flex;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.90);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: var(--small-size);
+      font-weight: 900;
+      box-shadow: 0 14px 36px rgba(20, 33, 61, 0.10);
+    }
+
+    .sequence-badge strong {
+      color: var(--primary);
+      font-size: 1.25em;
+    }
+
+    .coin-graph-scene {
+      display: grid;
+      grid-template-columns: 0.84fr 1.16fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .prob-panel {
+      min-height: min(70vh, 660px);
+      display: grid;
+      align-content: center;
+      gap: 18px;
+      padding: 34px;
+      border-radius: var(--radius-xl);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .prob-value {
+      display: grid;
+      gap: 8px;
+      padding: 22px;
+      border-radius: var(--radius-md);
+      background: #f3f7ff;
+      border: 1px solid #dce8ff;
+    }
+
+    .prob-value b {
+      color: var(--primary);
+      font-size: clamp(42px, 4.8vw, 74px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .prob-chart {
+      min-height: min(70vh, 660px);
+      padding: 30px;
+      border-radius: var(--radius-xl);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .prob-chart svg {
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+    }
+
+    .prob-grid {
+      stroke: rgba(99, 112, 131, 0.16);
+      stroke-width: 1;
+    }
+
+    .prob-target {
+      stroke: var(--red);
+      stroke-width: 4;
+      stroke-dasharray: 12 10;
+    }
+
+    .prob-actual {
+      stroke: var(--primary);
+      stroke-width: 4;
+      stroke-dasharray: 12 10;
+    }
+
+    .coin-area {
+      fill: rgba(38, 86, 217, 0.12);
+    }
+
+    .prob-bar-fill {
+      transform-box: fill-box;
+      transform-origin: bottom;
+      transform: scaleY(0);
+      animation-delay: var(--delay, 160ms);
+    }
+
+    .prob-graph-line {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 980;
+      stroke-dashoffset: 980;
+    }
+
+    .prob-point {
+      fill: #ffffff;
+      stroke: var(--primary);
+      stroke-width: 6;
+      opacity: 0;
+      animation-delay: var(--delay, 0ms);
+    }
+
+    .motion-ready .prob-bar-fill {
+      animation: barGrow 900ms ease forwards;
+      animation-delay: var(--delay, 160ms);
+    }
+
+    .motion-ready .prob-graph-line {
+      animation: drawProbLine 1900ms ease forwards;
+    }
+
+    .motion-ready .prob-point {
+      animation: revealDot 760ms ease forwards;
+      animation-delay: var(--delay, 0ms);
+    }
+
+    @keyframes barGrow {
+      to { transform: scaleY(1); }
+    }
+
+    @keyframes drawProbLine {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes revealDot {
+      to { opacity: 1; }
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .timeline-step {
+      position: relative;
+      padding: 22px;
+      min-height: 168px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 38px rgba(20, 33, 61, 0.08);
+    }
+
+    .timeline-step .num {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      margin-bottom: 16px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .compare-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .compare-card {
+      padding: 30px;
+      min-height: 360px;
+      border-radius: var(--radius-xl);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      cursor: zoom-in;
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .compare-card:hover,
+    .compare-card:focus-visible {
+      transform: translateY(-4px);
+      border-color: rgba(38, 86, 217, 0.38);
+      box-shadow: 0 24px 58px rgba(20, 33, 61, 0.16);
+      outline: none;
+    }
+
+    .expand-hint {
+      display: inline-flex;
+      margin-top: 16px;
+      color: var(--primary);
+      font-size: var(--tiny-size);
+      font-weight: 900;
+    }
+
+    .single-line,
+    .multi-lines {
+      height: 190px;
+      margin-top: 26px;
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(to right, transparent 0%, transparent 13%, rgba(99, 112, 131, 0.10) 13%, rgba(99, 112, 131, 0.10) 14%, transparent 14%),
+        linear-gradient(to bottom, transparent 0%, transparent 24%, rgba(99, 112, 131, 0.10) 24%, rgba(99, 112, 131, 0.10) 25%, transparent 25%),
+        linear-gradient(to bottom, transparent 0%, transparent 48%, rgba(99, 112, 131, 0.13) 48%, rgba(99, 112, 131, 0.13) 49%, transparent 49%),
+        linear-gradient(to bottom, transparent 0%, transparent 72%, rgba(99, 112, 131, 0.10) 72%, rgba(99, 112, 131, 0.10) 73%, transparent 73%),
+        #f5f8ff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mini-axis-label {
+      position: absolute;
+      left: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      z-index: 2;
+    }
+
+    .mini-axis-label.top { top: 16%; }
+    .mini-axis-label.mid { top: 43%; }
+    .mini-axis-label.low { top: 69%; }
+
+    .single-line::after {
+      content: "";
+      position: absolute;
+      left: 12%;
+      right: 10%;
+      top: 52%;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--primary);
+      transform: rotate(-8deg);
+      transform-origin: left center;
+    }
+
+    .multi-lines svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .graph-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      place-items: center;
+      padding: 36px;
+      background: rgba(15, 23, 42, 0.66);
+      backdrop-filter: blur(8px);
+    }
+
+    body.graph-modal-open .graph-modal {
+      display: grid;
+    }
+
+    .graph-modal-panel {
+      width: min(1180px, calc(100vw - 72px));
+      min-height: min(720px, calc(100vh - 72px));
+      padding: 34px;
+      border-radius: 24px;
+      background: #ffffff;
+      box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .graph-modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    .graph-modal-head h3 {
+      font-size: clamp(30px, 3vw, 48px);
+    }
+
+    .graph-modal-copy {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: var(--small-size);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      flex: 0 0 auto;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      color: var(--ink);
+      font-size: 26px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .modal-visual {
+      display: none;
+      min-height: 0;
+      border-radius: 20px;
+      background:
+        linear-gradient(to right, transparent 0%, transparent 12%, rgba(99, 112, 131, 0.12) 12%, rgba(99, 112, 131, 0.12) 12.4%, transparent 12.4%),
+        linear-gradient(to bottom, transparent 0%, transparent 54%, rgba(99, 112, 131, 0.12) 54%, rgba(99, 112, 131, 0.12) 54.4%, transparent 54.4%),
+        #f5f8ff;
+      border: 1px solid #dbe4f0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .graph-modal[data-mode="single"] .single-expanded,
+    .graph-modal[data-mode="distribution"] .distribution-expanded {
+      display: block;
+    }
+
+    .expanded-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-grid {
+      position: absolute;
+      inset: 26px 42px 34px 58px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .grid-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(99, 112, 131, 0.22);
+    }
+
+    .grid-line::before {
+      content: attr(data-label);
+      position: absolute;
+      left: -48px;
+      top: -10px;
+      width: 38px;
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .grid-line:nth-child(1) { top: 16%; }
+    .grid-line:nth-child(2) { top: 36%; }
+    .grid-line:nth-child(3) { top: 56%; }
+    .grid-line:nth-child(4) { top: 76%; }
+
+    .grid-axis-label {
+      position: absolute;
+      left: -48px;
+      bottom: -8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .draw-line {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 900;
+      stroke-dashoffset: 900;
+      animation: expandedDraw 1400ms ease forwards;
+    }
+
+    .single-expanded .draw-line {
+      stroke: var(--primary);
+      stroke-width: 12;
+    }
+
+    .forecast-point {
+      opacity: 0;
+      transform-origin: center;
+      animation: pointPop 360ms ease 1250ms forwards;
+    }
+
+    .distribution-expanded .draw-line {
+      stroke-width: 8;
+      animation-duration: 1450ms;
+    }
+
+    .distribution-expanded .draw-line:nth-child(2) { animation-delay: 140ms; }
+    .distribution-expanded .draw-line:nth-child(3) { animation-delay: 260ms; }
+    .distribution-expanded .draw-line:nth-child(4) { animation-delay: 380ms; }
+    .distribution-expanded .draw-line:nth-child(5) { animation-delay: 500ms; }
+
+    .distribution-expanded .expanded-svg {
+      animation: pathFadeOut 520ms ease 2380ms forwards;
+      z-index: 1;
+    }
+
+    .drop-dot {
+      position: absolute;
+      left: calc(91% - 9px);
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      opacity: 0;
+      transform-origin: 50% 50%;
+      animation: endpointDrop 950ms cubic-bezier(.2,.8,.25,1) 1700ms forwards;
+    }
+
+    .drop-dot:nth-of-type(1) { top: calc(8.3% - 9px); background: #2656d9; }
+    .drop-dot:nth-of-type(2) { top: calc(35.9% - 9px); background: #0ea5a8; animation-delay: 1780ms; }
+    .drop-dot:nth-of-type(3) { top: calc(76.1% - 9px); background: #ef4444; animation-delay: 1860ms; }
+    .drop-dot:nth-of-type(4) { top: calc(58.7% - 9px); background: #f97316; animation-delay: 1940ms; }
+    .drop-dot:nth-of-type(5) { top: calc(22.8% - 9px); background: #7c3aed; animation-delay: 2020ms; }
+
+    .distribution-bars {
+      position: absolute;
+      left: 9%;
+      right: 9%;
+      bottom: 22px;
+      height: calc(100% - 72px);
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 16px;
+      align-items: end;
+      padding-top: 12px;
+      z-index: 2;
+    }
+
+    .bar-column {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 28px 1fr 24px;
+      align-items: end;
+      justify-items: center;
+      min-width: 0;
+    }
+
+    .bar-value {
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 950;
+      opacity: 0;
+      animation: labelFade 360ms ease forwards;
+      animation-delay: calc(var(--d) + 520ms);
+    }
+
+    .bar-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      opacity: 0;
+      animation: labelFade 360ms ease forwards;
+      animation-delay: calc(var(--d) + 560ms);
+    }
+
+    .dist-bar {
+      display: block;
+      width: 100%;
+      height: var(--h);
+      border-radius: 14px 14px 0 0;
+      background: linear-gradient(180deg, rgba(38, 86, 217, 0.86), rgba(14, 165, 168, 0.62));
+      transform: scaleY(0);
+      transform-origin: bottom;
+      animation: barRise 620ms ease forwards;
+      animation-delay: var(--d);
+    }
+
+    .dist-bar.loss {
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.86), rgba(249, 115, 22, 0.62));
+    }
+
+    @keyframes expandedDraw {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes pointPop {
+      from { opacity: 0; transform: scale(0.35); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes endpointDrop {
+      0% { opacity: 0; transform: translate(0, 0) rotate(0deg) scale(0.7); }
+      18% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+      62% { opacity: 1; transform: translate(0, 84px) rotate(90deg) scale(1); }
+      100% { opacity: 0; transform: translate(-520px, 120px) rotate(90deg) scale(0.5); }
+    }
+
+    @keyframes pathFadeOut {
+      to {
+        opacity: 0;
+        transform: translateY(-18px);
+      }
+    }
+
+    @keyframes barRise {
+      to { transform: scaleY(1); }
+    }
+
+    @keyframes labelFade {
+      to { opacity: 1; }
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(70px, 1fr));
+      gap: 10px;
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .matrix-cell {
+      min-height: 74px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 12px;
+      border-radius: 14px;
+      background: #f3f7ff;
+      color: var(--primary-dark);
+      font-family: var(--mono);
+      font-size: clamp(18px, 1.45vw, 23px);
+      font-weight: 800;
+    }
+
+    .matrix-cell.head {
+      background: var(--primary);
+      color: #ffffff;
+      font-family: inherit;
+    }
+
+    .covariance-visual {
+      display: grid;
+      gap: 12px;
+    }
+
+    .movement-card {
+      display: grid;
+      grid-template-columns: minmax(280px, 1.1fr) minmax(220px, 0.9fr);
+      gap: 16px;
+      align-items: center;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(20, 33, 61, 0.06);
+    }
+
+    .movement-chart {
+      width: 100%;
+      aspect-ratio: 3.05 / 1;
+      overflow: visible;
+    }
+
+    .movement-chart .grid-line {
+      stroke: rgba(100, 116, 139, 0.18);
+      stroke-width: 1;
+    }
+
+    .movement-chart .asset-a {
+      fill: none;
+      stroke: #2656d9;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .movement-chart .asset-b {
+      fill: none;
+      stroke: #ef4444;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .movement-copy {
+      display: grid;
+      gap: 6px;
+    }
+
+    .movement-copy h3 {
+      font-size: clamp(21px, 1.55vw, 28px);
+    }
+
+    .movement-copy .tag {
+      width: fit-content;
+      font-size: clamp(14px, 0.9vw, 17px);
+    }
+
+    .risk-summary {
+      display: grid;
+      gap: 14px;
+      align-content: center;
+    }
+
+    .risk-summary .lead {
+      font-size: clamp(22px, 1.8vw, 30px);
+      line-height: 1.35;
+    }
+
+    .risk-summary .formula {
+      font-size: clamp(17px, 1.22vw, 22px);
+      padding: 16px 18px;
+    }
+
+    .code-block {
+      margin: 0;
+      padding: 26px 28px;
+      border-radius: var(--radius-lg);
+      background: #101828;
+      color: #ecf2ff;
+      font-family: var(--mono);
+      font-size: clamp(17px, 1.35vw, 22px);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .code-block .comment {
+      color: #9dd6ff;
+    }
+
+    .code-tour {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.36fr) 1fr;
+      gap: 34px;
+      align-items: stretch;
+    }
+
+    .code-tour.single {
+      grid-template-columns: minmax(320px, 0.42fr) minmax(480px, 0.58fr);
+      transition: grid-template-columns 720ms cubic-bezier(.2,.76,.2,1);
+    }
+
+    .code-animation-slide:not(.code-step-0) .code-tour.single {
+      grid-template-columns: minmax(820px, 1.82fr) minmax(220px, 0.34fr);
+    }
+
+    .code-map,
+    .code-focus {
+      min-height: min(72vh, 760px);
+      border-radius: 6px;
+      background: #05070d;
+      border: 1px solid rgba(219, 228, 240, 0.18);
+      box-shadow: 0 18px 44px rgba(20, 33, 61, 0.16);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .code-animation-slide .code-map,
+    .code-animation-slide .code-stage-notes {
+      min-height: min(66vh, 700px);
+    }
+
+    .code-map pre,
+    .code-focus pre {
+      margin: 0;
+      color: #f8fafc;
+      font-family: var(--mono);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .code-map pre {
+      position: absolute;
+      left: 0;
+      top: var(--code-pan, 0px);
+      padding: 28px 32px;
+      font-size: clamp(8px, 0.50vw, 10px);
+      transform: scale(var(--code-scale, 0.58));
+      transform-origin: top left;
+      width: 172%;
+      transition: top 720ms cubic-bezier(.2,.76,.2,1), transform 720ms cubic-bezier(.2,.76,.2,1);
+    }
+
+    .code-animation-slide:not(.code-step-0) .code-map.auto-zoom pre {
+      font-size: clamp(12px, 0.78vw, 15px);
+      width: 84%;
+    }
+
+    .code-map.zoom pre {
+      font-size: clamp(10px, 0.68vw, 13px);
+      width: 122%;
+    }
+
+    .code-map.zoom-data {
+      --code-scale: 1.05;
+      --code-pan: -8px;
+    }
+
+    .code-map.zoom-functions {
+      --code-scale: 1.02;
+      --code-pan: -178px;
+    }
+
+    .code-map.zoom-loop {
+      --code-scale: 1.05;
+      --code-pan: -456px;
+    }
+
+    .code-map.zoom-result {
+      --code-scale: 1.04;
+      --code-pan: -650px;
+    }
+
+    .code-animation-slide.code-step-0 .code-map.auto-zoom pre {
+      top: 0;
+      transform: scale(0.56);
+    }
+
+    .code-animation-slide.code-step-1 .code-map.auto-zoom pre {
+      --code-scale: 1.18;
+    }
+
+    .code-animation-slide.code-step-2 .code-map.auto-zoom pre {
+      --code-scale: 1.16;
+    }
+
+    .code-animation-slide.code-step-3 .code-map.auto-zoom pre {
+      --code-scale: 1.16;
+    }
+
+    .code-animation-slide.code-step-4 .code-map.auto-zoom pre {
+      --code-scale: 1.16;
+    }
+
+    .code-animation-slide.code-step-5 .code-map.auto-zoom pre {
+      --code-scale: 1.16;
+    }
+
+    .code-animation-slide.code-step-6 .code-map.auto-zoom pre,
+    .code-animation-slide.code-step-7 .code-map.auto-zoom pre {
+      --code-scale: 1.16;
+    }
+
+    .code-section {
+      display: block;
+      margin: 4px 0;
+      padding: 5px 9px;
+      border-radius: 10px;
+      transition: opacity 360ms ease, background 360ms ease, box-shadow 360ms ease;
+    }
+
+    .code-animation-slide:not(.code-step-0) .code-section {
+      opacity: 0.18;
+    }
+
+    .code-animation-slide.code-step-1 .code-data,
+    .code-animation-slide.code-step-2 .code-functions-a,
+    .code-animation-slide.code-step-3 .code-volatility,
+    .code-animation-slide.code-step-4 .code-sharpe,
+    .code-animation-slide.code-step-5 .code-loop,
+    .code-animation-slide.code-step-6 .code-result-a,
+    .code-animation-slide.code-step-7 .code-result-b {
+      opacity: 1;
+      background: rgba(37, 99, 235, 0.24);
+      box-shadow: inset 5px 0 0 #60a5fa, 0 0 0 1px rgba(96, 165, 250, 0.24);
+    }
+
+    .code-stage-notes {
+      position: relative;
+      min-height: min(72vh, 760px);
+    }
+
+    .code-step {
+      position: absolute;
+      inset: 50% 0 auto 0;
+      transform: translateY(-50%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .code-animation-slide.code-step-0 .code-step:nth-child(1),
+    .code-animation-slide.code-step-1 .code-step:nth-child(2),
+    .code-animation-slide.code-step-2 .code-step:nth-child(3),
+    .code-animation-slide.code-step-3 .code-step:nth-child(4),
+    .code-animation-slide.code-step-4 .code-step:nth-child(5),
+    .code-animation-slide.code-step-5 .code-step:nth-child(6),
+    .code-animation-slide.code-step-6 .code-step:nth-child(7),
+    .code-animation-slide.code-step-7 .code-step:nth-child(8) {
+      opacity: 1;
+      transform: translateY(-50%);
+    }
+
+    .code-step .card {
+      box-shadow: 0 18px 48px rgba(20, 33, 61, 0.12);
+      padding: 26px;
+    }
+
+    .code-step h3 {
+      font-size: clamp(24px, 2vw, 32px);
+    }
+
+    .code-animation-slide .code-step,
+    .code-animation-slide .code-map.auto-zoom pre {
+      transition: opacity 360ms ease, top 720ms cubic-bezier(.2,.76,.2,1), transform 720ms cubic-bezier(.2,.76,.2,1);
+    }
+
+    .code-focus {
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .code-focus-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 22px;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      font-size: var(--small-size);
+      font-weight: 900;
+    }
+
+    .code-focus pre {
+      padding: 28px 32px;
+      font-size: clamp(14px, 1.02vw, 18px);
+      overflow: hidden;
+    }
+
+    .code-highlight {
+      display: inline;
+      color: #93c5fd;
+      font-weight: 900;
+    }
+
+    .code-note-panel {
+      display: grid;
+      align-content: center;
+      gap: 18px;
+    }
+
+    .code-note-panel .big-number {
+      margin-bottom: 6px;
+    }
+
+    .code-note-panel .card {
+      box-shadow: 0 14px 42px rgba(20, 33, 61, 0.10);
+    }
+
+    .readable-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 12px;
+      font-size: var(--small-size);
+      line-height: 1.35;
+    }
+
+    .readable-table th {
+      text-align: left;
+      padding: 0 18px 8px;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .readable-table td {
+      padding: 18px;
+      background: #ffffff;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      color: var(--ink);
+      font-weight: 750;
+    }
+
+    .readable-table td:first-child {
+      border-left: 1px solid var(--line);
+      border-radius: 16px 0 0 16px;
+      color: var(--primary);
+      font-weight: 900;
+      width: 24%;
+    }
+
+    .readable-table td:last-child {
+      border-right: 1px solid var(--line);
+      border-radius: 0 16px 16px 0;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .check-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .check-item {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+    }
+
+    .check-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: rgba(34, 168, 102, 0.12);
+      color: var(--green);
+      font-weight: 900;
+      font-size: 24px;
+    }
+
+    .warning-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: rgba(249, 115, 22, 0.12);
+      color: var(--orange);
+      font-weight: 900;
+      font-size: 24px;
+    }
+
+    .loss-zone {
+      margin-top: 24px;
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(90deg, rgba(239, 68, 68, 0.13) 0%, rgba(239, 68, 68, 0.05) 31%, rgba(38, 86, 217, 0.05) 31%, rgba(38, 86, 217, 0.02) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.20);
+    }
+
+    .loss-scale {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      font-size: var(--small-size);
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .loss-scale span:nth-child(1) {
+      color: var(--red);
+      text-align: left;
+    }
+
+    .loss-scale span:nth-child(2) {
+      text-align: center;
+    }
+
+    .loss-scale span:nth-child(3) {
+      color: var(--primary);
+      text-align: right;
+    }
+
+    .sim-control {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .sim-control button {
+      border: 1px solid var(--line);
+      background: #ffffff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 10px 15px;
+      font-size: var(--tiny-size);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .sim-control button.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .convergence-slide .content {
+      align-items: center;
+    }
+
+    .convergence-slide .card {
+      padding: 22px;
+    }
+
+    .convergence-slide .card > h3 {
+      font-size: clamp(23px, 1.85vw, 30px);
+    }
+
+    .convergence-slide .formula {
+      margin-top: 16px !important;
+      padding: 16px 20px;
+      font-size: clamp(20px, 1.75vw, 27px);
+    }
+
+    .convergence-slide .sim-control {
+      margin-top: 14px;
+      gap: 8px;
+    }
+
+    .convergence-slide .sim-control button {
+      padding: 8px 13px;
+    }
+
+    .convergence-slide .three-col {
+      margin-top: 14px !important;
+      gap: 9px !important;
+    }
+
+    .convergence-slide .metric {
+      padding: 14px 10px;
+    }
+
+    .convergence-slide .metric .value {
+      font-size: clamp(24px, 2.2vw, 34px);
+    }
+
+    .convergence-slide .check-list {
+      margin-top: 14px !important;
+      gap: 9px;
+    }
+
+    .convergence-slide .check-item {
+      grid-template-columns: 34px 1fr;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+    }
+
+    .convergence-slide .check-mark {
+      width: 34px;
+      height: 34px;
+      font-size: 20px;
+    }
+
+    .convergence-slide .check-item h3 {
+      font-size: clamp(17px, 1.18vw, 21px);
+    }
+
+    .convergence-slide .check-item .small,
+    .convergence-slide .card > .small {
+      font-size: clamp(15px, 1.02vw, 18px);
+      line-height: 1.45;
+    }
+
+    .big-number {
+      font-size: clamp(48px, 5vw, 78px);
+      line-height: 1;
+      letter-spacing: -0.06em;
+      font-weight: 950;
+      color: var(--primary);
+    }
+
+    .reference-list {
+      display: grid;
+      gap: 10px;
+      font-size: var(--tiny-size);
+      line-height: 1.42;
+      color: var(--muted);
+    }
+
+    .minimal-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 26px;
+      align-items: stretch;
+    }
+
+    .definition-panel {
+      display: grid;
+      align-content: center;
+      gap: 28px;
+      min-height: min(58vh, 560px);
+    }
+
+    .definition-panel .lead {
+      max-width: none;
+      margin-top: 0;
+      color: var(--ink);
+      font-weight: 850;
+    }
+
+    .plain-steps {
+      display: grid;
+      gap: 14px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .plain-steps li {
+      padding: 18px 20px;
+      border-radius: var(--radius-md);
+      background: #f3f7ff;
+      border: 1px solid #dce8ff;
+      color: var(--ink);
+      font-size: var(--small-size);
+      font-weight: 820;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+
+    .process-flow {
+      display: grid;
+      align-content: center;
+      gap: 18px;
+      min-height: min(58vh, 560px);
+    }
+
+    .flow-chip {
+      display: grid;
+      place-items: center;
+      min-height: 86px;
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      color: var(--primary-dark);
+      font-size: clamp(24px, 2.3vw, 36px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      box-shadow: 0 14px 36px rgba(20, 33, 61, 0.08);
+    }
+
+    .flow-arrow-text {
+      color: var(--muted);
+      text-align: center;
+      font-size: clamp(26px, 2.4vw, 38px);
+      font-weight: 900;
+      line-height: 0.8;
+    }
+
+    .mc-validity-note {
+      padding: 20px 22px;
+      border-radius: var(--radius-md);
+      background: #101828;
+      color: #ffffff;
+      box-shadow: 0 16px 42px rgba(20, 33, 61, 0.16);
+    }
+
+    .mc-validity-note h3 {
+      color: #ffffff;
+      font-size: clamp(21px, 1.55vw, 28px);
+    }
+
+    .mc-validity-note p {
+      color: rgba(255, 255, 255, 0.78);
+      margin-top: 8px;
+    }
+
+    .mc-validity-note .theory-formula {
+      background: rgba(255, 255, 255, 0.10);
+      border-color: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-size: clamp(18px, 1.25vw, 24px);
+    }
+
+    .process-flow.has-validity {
+      gap: 10px;
+    }
+
+    .process-flow.has-validity .flow-chip {
+      min-height: 62px;
+      font-size: clamp(21px, 1.8vw, 30px);
+    }
+
+    .process-flow.has-validity .flow-arrow-text {
+      font-size: clamp(18px, 1.4vw, 25px);
+      line-height: 0.7;
+    }
+
+    .indicator-layout {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .indicator-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .indicator-row {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 16px;
+      align-items: start;
+      padding: 18px 20px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--line);
+    }
+
+    .indicator-num {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: #eef4ff;
+      color: var(--primary);
+      font-weight: 950;
+      font-size: 24px;
+    }
+
+    .indicator-row h3 {
+      font-size: clamp(22px, 1.85vw, 30px);
+    }
+
+    .indicator-row .small {
+      margin-top: 6px;
+    }
+
+    .sharpe-panel {
+      display: grid;
+      align-content: center;
+      gap: 24px;
+    }
+
+    .sharpe-formula {
+      padding: 30px;
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+      color: var(--primary-dark);
+      border: 1px solid #dce8ff;
+      font-family: var(--mono);
+      font-size: clamp(28px, 3vw, 46px);
+      font-weight: 850;
+      line-height: 1.35;
+      text-align: center;
+      box-shadow: 0 18px 48px rgba(20, 33, 61, 0.10);
+    }
+
+    .sharpe-note {
+      padding: 26px;
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), transparent 40%),
+        linear-gradient(145deg, #173a99 0%, #14213d 100%);
+      color: #ffffff;
+    }
+
+    .sharpe-note .small {
+      margin-top: 12px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    /* =========================================================
+      4. 하단 내비게이션
+      - 방향키, 버튼, 진행 점 클릭, 전체화면 버튼을 지원합니다.
+      ========================================================= */
+    .nav-ui {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      z-index: 20;
+      width: min(1180px, calc(100vw - 44px));
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 18px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .nav-buttons,
+    .counter,
+    .dots {
+      pointer-events: auto;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      border: 0;
+      min-width: 48px;
+      height: 48px;
+      padding: 0 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      box-shadow: 0 12px 30px rgba(20, 33, 61, 0.15);
+      font-weight: 900;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      background: #ffffff;
+    }
+
+    .nav-btn.primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 13px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 12px 30px rgba(20, 33, 61, 0.12);
+      backdrop-filter: blur(12px);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border: 0;
+      border-radius: 999px;
+      background: #c7d2e6;
+      cursor: pointer;
+      transition: width 200ms ease, background 200ms ease;
+    }
+
+    .dot.active {
+      width: 32px;
+      background: var(--primary);
+    }
+
+    .counter {
+      min-width: 106px;
+      text-align: center;
+      padding: 13px 15px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 12px 30px rgba(20, 33, 61, 0.12);
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--muted);
+      backdrop-filter: blur(12px);
+    }
+
+    .progress-bar {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      height: 6px;
+      width: 100%;
+      background: rgba(99, 112, 131, 0.13);
+      z-index: 21;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--primary), var(--teal));
+      transition: width 260ms ease;
+    }
+
+    /* =========================================================
+      5. 반응형 보정
+      - 작은 화면에서는 열을 줄여 전체 화면 안에 들어가게 합니다.
+      ========================================================= */
+    @media (max-width: 980px) {
+      :root {
+        --slide-pad: 34px;
+      }
+
+      .two-col,
+      .two-col.wide-left,
+      .two-col.wide-right,
+      .lln-explain-grid,
+      .coin-graph-scene,
+      .minimal-grid,
+      .indicator-layout,
+      .code-tour,
+      .three-col,
+      .four-col,
+      .compare-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .lln-slide .slide-header h2 {
+        font-size: clamp(50px, 12vw, 76px);
+      }
+
+      .law-formula-card,
+      .coin-sequence,
+      .prob-chart,
+      .prob-panel {
+        min-height: 300px;
+      }
+
+      .coin-field {
+        inset: 34px;
+      }
+
+      .coin-field.ten {
+        grid-template-columns: repeat(5, 64px);
+        grid-auto-rows: 64px;
+      }
+
+      .coin-field.hundred {
+        grid-template-columns: repeat(10, 30px);
+        grid-auto-rows: 30px;
+        --coin-gap: 5px;
+      }
+
+      .hundred .seq-coin {
+        --coin-size: 30px;
+        font-size: 9px;
+      }
+
+      .timeline {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .diagram-flow {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+        margin: 0 auto;
+      }
+
+      .nav-ui {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 10px;
+      }
+
+      .dots {
+        max-width: 92vw;
+        overflow: hidden;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="deck" id="deck" aria-label="몬테카를로 시뮬레이션 HTML 발표자료">
+
+    <!-- =========================================================
+      SLIDE 01. 표지
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 1. 여기부터 1번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 1번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide cover-slide active" data-slide="1">
+      <div class="cover-layout">
+        <div class="cover-top">
+          <span>빅데이터프로그래밍01</span>
+          <span>24조</span>
+        </div>
+
+        <div class="cover-main">
+          <div class="cover-eyebrow">반복 실험으로 불확실성 이해하기</div>
+          <h1 class="cover-title">몬테카를로<br />시뮬레이션</h1>
+          <div class="cover-rule" aria-hidden="true"></div>
+          <p class="cover-subtitle">
+            대수의 법칙부터 포트폴리오 예시까지<br />
+            난수 실험이 어떻게 의사결정에 쓰이는지 보기
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 02. 발표 흐름
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 2. 여기부터 2번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 2번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="2">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">발표 구성</div>
+          <h2>발표 구성</h2>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="four-col">
+          <div class="card soft">
+            <div class="mini-icon">1</div>
+            <h3>대수의 법칙</h3>
+            <p class="small">반복 횟수가 늘어나면 추정값이 왜 안정화되는지 먼저 설명한다.</p>
+          </div>
+
+          <div class="card soft">
+            <div class="mini-icon teal-bg">2</div>
+            <h3>몬테카를로 핵심식</h3>
+            <p class="small">난수 생성, 반복 실험, 결과 집계, 의사결정 흐름을 명확히 잡는다.</p>
+          </div>
+
+          <div class="card soft">
+            <div class="mini-icon orange-bg">3</div>
+            <h3>예시 상황 설정</h3>
+            <p class="small">여러 종목을 어떤 비중으로 섞을지 정하고, 수익률·변동성·샤프지수를 정리한다.</p>
+          </div>
+
+          <div class="card soft">
+            <div class="mini-icon">4</div>
+            <h3>코드 설명</h3>
+            <p class="small">무작위 비중 생성, 포트폴리오 성과 계산, 최적 조합 선택 구조를 본다.</p>
+          </div>
+        </div>
+
+        <div class="timeline" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="timeline-step">
+            <div class="num">1</div>
+            <h3>대수의 법칙</h3>
+            <p class="tiny">반복과 수렴</p>
+          </div>
+          <div class="timeline-step">
+            <div class="num">2</div>
+            <h3>몬테카를로</h3>
+            <p class="tiny">핵심 식과 확률 추정</p>
+          </div>
+          <div class="timeline-step">
+            <div class="num">3</div>
+            <h3>금융 예시</h3>
+            <p class="tiny">종목, 비중, 샤프지수</p>
+          </div>
+          <div class="timeline-step">
+            <div class="num">4</div>
+            <h3>구현</h3>
+            <p class="tiny">무작위 비중과 최적 조합</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 03. 대수의 법칙
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 3. 여기부터 3번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 3번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide lln-slide" data-slide="3">
+      <div class="slide-header">
+        <div>
+          <h2>대수의 법칙</h2>
+          <p class="lead">
+            같은 실험을 충분히 많이 반복하면, 관찰된 결과의 평균이 실제 기대값에
+            가까워진다는 확률 이론
+          </p>
+        </div>
+      </div>
+
+      <div class="content lln-explain-grid">
+        <div>
+          <div class="law-formula-card" aria-label="기대값은 반복 관찰값의 평균으로 추정된다">
+            <span>
+              E[Y] &asymp;
+              <span class="frac"><span>1</span><span>N</span></span>
+              <span class="sigma">&sum;</span>
+              y<sup>(i)</sup>
+            </span>
+          </div>
+
+          <div class="theory-note">
+            <h3>이론적 의미</h3>
+            <p class="small">
+              표본평균은 반복 횟수 N이 커질수록 기대값에 가까워지고,
+              표본평균의 표준오차는 아래 공식으로 계산된다.
+            </p>
+            <div class="theory-formula">
+              표준오차 SE = σ / √N
+            </div>
+            <p class="tiny">
+              따라서 N이 커질수록 표준오차가 작아진다. N을 4배로 늘리면 SE는 약 1/2이 된다.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <div class="lln-chart-shell">
+            <canvas id="llnChart" aria-label="반복 횟수 증가에 따른 추정값 안정화 차트"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 04. 동전 던지기 비유 1
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 4. 여기부터 4번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 4번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="4">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="coin-sequence">
+          <div class="sequence-badge"><strong>10</strong> coins</div>
+          <div class="coin-field ten arrange" data-coins="10" data-heads="10" data-label="동전 10개 배열"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 05. 동전 던지기 비유 2
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 5. 여기부터 5번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 5번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="5">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="coin-sequence">
+          <div class="sequence-badge"><strong>앞면 7 / 10</strong></div>
+          <div class="coin-field ten result" data-coins="10" data-heads="7" data-label="동전 10개 중 앞면 7개"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 06. 동전 던지기 비유 3
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 6. 여기부터 6번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 6번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="6">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content coin-graph-scene">
+        <div class="prob-panel">
+          <div class="prob-value">
+            <span class="small">이론적 확률</span>
+            <b>0.50</b>
+          </div>
+          <div class="prob-value">
+            <span class="small">10번 시행 결과</span>
+            <b>0.70</b>
+          </div>
+        </div>
+
+        <div class="prob-chart">
+          <svg viewBox="0 0 760 460" role="img" aria-label="이론적 확률 0.5와 실제 시행 확률 0.7 비교 그래프">
+            <line class="prob-grid" x1="96" y1="70" x2="700" y2="70" />
+            <line class="prob-grid" x1="96" y1="160" x2="700" y2="160" />
+            <line class="prob-grid" x1="96" y1="250" x2="700" y2="250" />
+            <line class="prob-grid" x1="96" y1="340" x2="700" y2="340" />
+            <line class="prob-grid" x1="96" y1="390" x2="700" y2="390" />
+            <line class="prob-target" x1="96" y1="250" x2="700" y2="250" />
+            <rect class="prob-bar-fill" style="--delay: 120ms;" x="212" y="250" width="120" height="140" rx="12" fill="#ef4444" opacity="0.84" />
+            <rect class="prob-bar-fill" style="--delay: 360ms;" x="462" y="160" width="120" height="230" rx="12" fill="#2656d9" opacity="0.88" />
+            <text x="112" y="238" fill="#ef4444" font-size="23" font-weight="950">기대값 0.50</text>
+            <text x="208" y="424" fill="#637083" font-size="25" font-weight="900">이론</text>
+            <text x="452" y="424" fill="#637083" font-size="25" font-weight="900">실제 10회</text>
+            <text x="478" y="144" fill="#2656d9" font-size="30" font-weight="950">0.70</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 07. 동전 던지기 비유 4
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 7. 여기부터 7번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 7번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="7">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="coin-sequence">
+          <div class="sequence-badge"><strong>100</strong> coins · 10 × 10</div>
+          <div class="coin-field hundred arrange" data-coins="100" data-heads="100" data-label="동전 100개 배열"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 08. 동전 던지기 비유 5
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 8. 여기부터 8번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 8번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="8">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="coin-sequence">
+          <div class="sequence-badge"><strong id="hundredHeadsResult">앞면 -- / 100</strong></div>
+          <div class="coin-field hundred result" data-coins="100" data-heads="50" data-random-heads="true" data-result-target="hundredHeadsResult" data-label="동전 100개 랜덤 시행 결과"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 09. 동전 던지기 비유 6
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 9. 여기부터 9번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 9번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="9">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="coin-sequence">
+          <div class="sequence-badge"><strong>N → ∞</strong></div>
+          <div class="coin-field many arrange" data-coins="560" data-heads="282" data-label="매우 많은 동전 일부를 훑어보는 화면"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 10. 동전 던지기 비유 7
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 10. 여기부터 10번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 10번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide coin-sequence-slide" data-slide="10">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">동전 던지기 비유</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="prob-chart">
+          <svg viewBox="0 0 980 520" role="img" aria-label="반복 횟수가 증가할수록 추정값이 0.5에 수렴하는 꺾은선 그래프">
+            <line class="prob-grid" x1="98" y1="80" x2="900" y2="80" />
+            <line class="prob-grid" x1="98" y1="165" x2="900" y2="165" />
+            <line class="prob-grid" x1="98" y1="250" x2="900" y2="250" />
+            <line class="prob-grid" x1="98" y1="335" x2="900" y2="335" />
+            <line class="prob-grid" x1="98" y1="420" x2="900" y2="420" />
+            <line class="prob-target" x1="98" y1="300" x2="900" y2="300" />
+            <path class="coin-area" d="M98 135 C190 186 278 220 360 248 C480 292 580 276 682 294 C760 306 830 300 900 300 L900 420 L98 420 Z" />
+            <path class="prob-graph-line" d="M98 135 C190 186 278 220 360 248 C480 292 580 276 682 294 C760 306 830 300 900 300" />
+            <circle class="prob-point" style="--delay: 280ms;" cx="98" cy="135" r="12" />
+            <circle class="prob-point" style="--delay: 560ms;" cx="230" cy="207" r="12" />
+            <circle class="prob-point" style="--delay: 840ms;" cx="360" cy="248" r="12" />
+            <circle class="prob-point" style="--delay: 1120ms;" cx="520" cy="284" r="12" />
+            <circle class="prob-point" style="--delay: 1400ms;" cx="682" cy="294" r="12" />
+            <circle class="prob-point" style="--delay: 1680ms;" cx="900" cy="300" r="12" />
+            <text x="112" y="122" fill="#2656d9" font-size="26" font-weight="950">0.70</text>
+            <text x="112" y="288" fill="#ef4444" font-size="25" font-weight="950">0.50</text>
+            <text x="110" y="466" fill="#637083" font-size="24" font-weight="900">10</text>
+            <text x="338" y="466" fill="#637083" font-size="24" font-weight="900">100</text>
+            <text x="500" y="466" fill="#637083" font-size="24" font-weight="900">1,000</text>
+            <text x="842" y="466" fill="#637083" font-size="24" font-weight="900">10,000</text>
+            <text x="790" y="74" fill="#14213d" font-size="28" font-weight="950">추정값 안정화</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 11. 대수의 법칙과 몬테카를로의 관계
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 11. 여기부터 11번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 11번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="11">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">연결 원리</div>
+          <h2>대수의 법칙과 몬테카를로</h2>
+          <p class="lead">
+            몬테카를로 시뮬레이션은 대수의 법칙을 계산 방식으로 활용한다.
+          </p>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="diagram-flow">
+          <div class="flow-box">
+            <div>
+              <h3>대수의 법칙</h3>
+              <p class="small" style="margin-top:14px;">
+                반복 횟수 N이 커질수록 관찰 평균이 실제 기대값에 수렴한다.
+              </p>
+            </div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-box">
+            <div>
+              <h3>난수 반복 실험</h3>
+              <p class="small" style="margin-top:14px;">
+                불확실한 상황을 난수로 여러 번 만들어 결과를 쌓는다.
+              </p>
+            </div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-box">
+            <div>
+              <h3>몬테카를로 추정</h3>
+              <p class="small" style="margin-top:14px;">
+                평균, 확률, 분포를 안정적인 추정값으로 해석한다.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card dark-blue">
+          <h3>핵심 연결</h3>
+          <p class="lead" style="color: rgba(255,255,255,0.9);">
+            몬테카를로 방법은 많은 난수 실험의 평균으로 값을 추정한다.
+            대수의 법칙에 의해 N이 커질수록 추정값은 기대값에 가까워지고,
+            표본평균의 표준오차는 SE = σ/√N 이므로 함께 작아진다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 12. 몬테카를로란?
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 12. 여기부터 12번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 12번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="12">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">몬테카를로의 정의</div>
+          <h2>몬테카를로 시뮬레이션</h2>
+        </div>
+      </div>
+
+      <div class="content minimal-grid">
+        <div class="card definition-panel">
+          <p class="lead">
+            불확실한 상황을 난수로 여러 번 만들어 보고,<br />
+            그 결과를 통계적으로 분석하는 방법
+          </p>
+
+          <ul class="plain-steps">
+            <li>불확실한 입력값의 범위를 지정</li>
+            <li>난수를 이용해 가능한 상황을 반복 생성</li>
+            <li>각 상황의 결과를 계산</li>
+            <li>결과들을 모아 평균, 확률, 분포를 분석</li>
+          </ul>
+        </div>
+
+        <div class="process-flow has-validity">
+          <div class="flow-chip">난수 생성</div>
+          <div class="flow-arrow-text">↓</div>
+          <div class="flow-chip">반복 실험</div>
+          <div class="flow-arrow-text">↓</div>
+          <div class="flow-chip">결과 집계</div>
+          <div class="flow-arrow-text">↓</div>
+          <div class="flow-chip">의사결정</div>
+          <div class="mc-validity-note">
+            <h3>타당성 근거</h3>
+            <p class="small">
+              표본평균의 표준오차는 N이 커질수록 작아진다.
+            </p>
+            <div class="theory-formula">
+              SE = σ / √N
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 13. 예시 상황 설정
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 13. 여기부터 13번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 13번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="13">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">예시 상황 설정</div>
+          <h2>포트폴리오 예시</h2>
+          <p class="lead">
+            삼성전자, SK하이닉스, KODEX200, 카카오 네 자산의 투자 비중을 정하는 문제
+          </p>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="two-col wide-left">
+          <div class="card dark-blue">
+            <h3>중심 질문</h3>
+            <p class="lead" style="color: rgba(255,255,255,0.9);">
+              각 자산에 얼마씩 투자해야<br />
+              수익률과 위험의 균형이 가장 좋은가?
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>가능한 비중 조합</h3>
+            <div class="pill-row">
+              <span class="pill">25 · 25 · 25 · 25</span>
+              <span class="pill teal">10 · 50 · 30 · 10</span>
+              <span class="pill orange">수많은 조합</span>
+            </div>
+            <p class="small" style="margin-top:18px;">
+              가능한 조합이 많기 때문에 하나씩 직접 비교하기 어렵다.
+            </p>
+          </div>
+        </div>
+
+        <div class="three-col">
+          <div class="card soft">
+            <div class="mini-icon">1</div>
+            <h3>비중 생성</h3>
+            <p class="small">각 자산의 투자 비중을 무작위로 만든다.</p>
+          </div>
+
+          <div class="card soft">
+            <div class="mini-icon teal-bg">2</div>
+            <h3>성과 계산</h3>
+            <p class="small">기대수익률, 변동성, 샤프지수를 계산한다.</p>
+          </div>
+
+          <div class="card soft">
+            <div class="mini-icon orange-bg">3</div>
+            <h3>최적 조합 선택</h3>
+            <p class="small">10,000번 반복한 뒤 샤프지수가 가장 높은 조합을 고른다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 14. 실험 전 핵심 용어
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 14. 여기부터 14번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 14번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="14">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">실험 전 핵심 용어</div>
+          <h2>핵심 지표</h2>
+          <p class="lead">실험은 단순히 수익률이 높은 조합이 아니라, 위험 대비 수익이 좋은 조합을 찾는 과정이다.</p>
+        </div>
+      </div>
+
+      <div class="content indicator-layout">
+        <div class="indicator-list">
+          <div class="indicator-row">
+            <div class="indicator-num">1</div>
+            <div>
+              <h3>비중</h3>
+              <p class="small">각 자산에 투자하는 비율이다. 모든 비중을 더하면 100%가 되어야 한다.</p>
+            </div>
+          </div>
+
+          <div class="indicator-row">
+            <div class="indicator-num">2</div>
+            <div>
+              <h3>기대수익률</h3>
+              <p class="small">해당 비중 조합에서 기대할 수 있는 평균 수익률이다.</p>
+            </div>
+          </div>
+
+          <div class="indicator-row">
+            <div class="indicator-num">3</div>
+            <div>
+              <h3>변동성과 공분산</h3>
+              <p class="small">변동성은 수익률의 흔들림이고, 공분산은 자산들이 함께 움직이는 정도다. 둘 다 포트폴리오 전체 위험 계산에 필요하다.</p>
+            </div>
+          </div>
+
+          <div class="indicator-row">
+            <div class="indicator-num">4</div>
+            <div>
+              <h3>샤프지수</h3>
+              <p class="small">위험을 감수한 만큼 수익을 얼마나 얻었는지 보여주는 지표다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sharpe-panel">
+          <div class="sharpe-formula">
+            Sharpe = (R<sub>p</sub> - R<sub>f</sub>) / σ<sub>p</sub>
+          </div>
+
+          <div class="sharpe-note">
+            <h3>해석 기준</h3>
+            <p class="small">
+              같은 수익률이라면 변동성이 낮을수록 좋고,<br />
+              같은 위험이라면 수익률이 높을수록 좋다.
+            </p>
+            <p class="small">
+              그래서 이 예시에서는 샤프지수가 가장 높은 조합을 효율적인 포트폴리오로 본다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 15. 코드 설명 1
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 15. 코드 설명
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 15. 여기부터 15번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 15번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide code-animation-slide code-step-0" data-slide="15" data-code-step="0">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">코드 설명</div>
+          <h2>전체 코드 흐름</h2>
+        </div>
+      </div>
+
+      <div class="content code-tour single">
+        <div class="code-map auto-zoom">
+<pre><span class="code-section code-data">import yfinance as yf
+import random
+import math
+import matplotlib.pyplot as plt
+import matplotlib
+
+# 재현성을 위한 seed 설정
+# 같은 코드와 같은 데이터에서는 항상 같은 시뮬레이션 결과가 나오도록 함
+random.seed(67)
+
+# 분석할 한국 주식 종목과 티커(종목코드) 목록
+# .KS = 코스피 종목
+tickers = {
+    "삼성전자": "005930.KS",
+    "SK하이닉스": "000660.KS",
+    "KODEX200": "069500.KS",
+    "카카오": "035720.KS",
+}
+
+ticker_list = list(tickers.values())   # ["005930.KS", "000660.KS", ...]
+name_list   = list(tickers.keys())     # ["삼성전자", "SK하이닉스", ...]
+
+# yfinance로 2년치 주가 데이터 다운로드
+raw_data = yf.download(ticker_list, start="2022-01-01", end="2024-12-31", auto_adjust=True)
+price_data = raw_data["Close"]         # 종가(Close)만 사용
+
+# 일일 수익률 = (오늘 가격 - 어제 가격) / 어제 가격
+# pct_change()가 이 계산을 자동으로 해줍니다
+returns = price_data.pct_change().dropna()
+
+print(returns.tail(3))
+
+</span><span class="code-section code-functions-a">def get_random_weights(n):
+    """
+    n개의 종목에 무작위로 비중을 배분하는 함수
+    예) n=4이면 [0.3, 0.2, 0.4, 0.1] 같은 리스트 반환
+    모든 비중의 합은 반드시 1.0 (100%)이 됩니다
+    """
+    # 무작위 숫자 n개를 만들고
+    raw = [random.random() for _ in range(n)]
+    # 전체 합으로 나눠서 비율로 바꿉니다
+    total = sum(raw)
+    weights = [w / total for w in raw]
+    return weights
+
+
+def calc_portfolio_return(weights, returns_df, ticker_list):
+    """
+    주어진 비중(weights)으로 포트폴리오의 연간 예상 수익률 계산
+    수익률 = 각 종목의 평균 일일수익률 × 비중 × 252 (1년 거래일수)
+    """
+    portfolio_return = 0
+    for i, ticker in enumerate(ticker_list):
+        mean_daily_return = returns_df[ticker].mean()   # 종목의 평균 일일 수익률
+        portfolio_return += mean_daily_return * weights[i]
+    portfolio_return *= 252   # 연간 수익률로 환산
+    return portfolio_return
+
+
+</span><span class="code-section code-volatility">def calc_portfolio_volatility(weights, returns_df, ticker_list):
+    """
+    주어진 비중으로 포트폴리오의 연간 변동성(리스크) 계산
+    변동성이 클수록 주가가 들쭉날쭉하다는 뜻 = 위험이 크다
+    """
+    n = len(ticker_list)
+    variance = 0.0
+
+    for i in range(n):
+        for j in range(n):
+            # 두 종목 간의 공분산(함께 움직이는 정도) 계산
+            cov = returns_df[ticker_list[i]].cov(returns_df[ticker_list[j]])
+            variance += weights[i] * weights[j] * cov
+
+    variance *= 252                    # 연간 변동성으로 환산
+    volatility = math.sqrt(variance)   # 표준편차 = 변동성
+    return volatility
+
+
+</span><span class="code-section code-sharpe">def calc_sharpe_ratio(portfolio_return, volatility, risk_free_rate=0.03):
+    """
+    샤프지수 계산
+    샤프지수 = (포트폴리오 수익률 - 무위험 수익률) / 변동성
+
+    무위험 수익률: 위험 없이 얻을 수 있는 수익률 (예: 국채 금리)
+    샤프지수가 높을수록 위험 대비 수익이 좋다는 뜻!
+    """
+    if volatility == 0:
+        return 0
+    sharpe = (portfolio_return - risk_free_rate) / volatility
+    return sharpe
+
+</span><span class="code-section code-loop">NUM_SIMULATIONS = 10000   # 시뮬레이션 횟수 (많을수록 정확하지만 느려짐)
+n_assets = len(ticker_list)
+
+# 결과를 저장할 빈 리스트들
+all_returns     = []   # 각 시도의 수익률
+all_volatility  = []   # 각 시도의 변동성
+all_sharpe      = []   # 각 시도의 샤프지수
+all_weights     = []   # 각 시도의 비중
+
+for i in range(NUM_SIMULATIONS):
+    # ① 무작위 비중 생성
+    weights = get_random_weights(n_assets)
+
+    # ② 수익률, 변동성, 샤프지수 계산
+    ret = calc_portfolio_return(weights, returns, ticker_list)
+    vol = calc_portfolio_volatility(weights, returns, ticker_list)
+    sharpe = calc_sharpe_ratio(ret, vol)
+
+    # ③ 결과 저장
+    all_returns.append(ret)
+    all_volatility.append(vol)
+    all_sharpe.append(sharpe)
+    all_weights.append(weights)
+
+    # 진행 상황 출력 (2000번마다)
+    if (i + 1) % 2000 == 0:
+        print(f"  {i + 1}/{NUM_SIMULATIONS}")
+
+</span><span class="code-section code-result-a"># 샤프지수가 가장 높은 포트폴리오 찾기
+max_sharpe_idx = all_sharpe.index(max(all_sharpe))
+max_sharpe_weights = all_weights[max_sharpe_idx]
+max_sharpe_return  = all_returns[max_sharpe_idx]
+max_sharpe_vol     = all_volatility[max_sharpe_idx]
+
+# 변동성이 가장 낮은 포트폴리오 찾기
+min_vol_idx = all_volatility.index(min(all_volatility))
+min_vol_weights = all_weights[min_vol_idx]
+min_vol_return  = all_returns[min_vol_idx]
+min_vol_vol     = all_volatility[min_vol_idx]
+
+# 결과 출력
+print("\n🔴 [샤프지수 최대 포트폴리오] - 수익 효율이 가장 좋은 조합")
+print(f"   수익률  : {max_sharpe_return * 100:.1f}%")
+print(f"   변동성  : {max_sharpe_vol * 100:.1f}%")
+print(f"   샤프지수: {all_sharpe[max_sharpe_idx]:.2f}")
+print("   비중:")
+for name, w in zip(name_list, max_sharpe_weights):
+    print(f"     - {name}: {w * 100:.1f}%")
+
+print("\n🔵 [변동성 최소 포트폴리오] - 가장 안정적인 조합")
+print(f"   수익률  : {min_vol_return * 100:.1f}%")
+print(f"   변동성  : {min_vol_vol * 100:.1f}%")
+print(f"   샤프지수: {all_sharpe[min_vol_idx]:.2f}")
+print("   비중:")
+for name, w in zip(name_list, min_vol_weights):
+    print(f"     - {name}: {w * 100:.1f}%")
+
+</span><span class="code-section code-result-b">plt.figure(figsize=(10, 6))
+
+# 모든 포트폴리오를 점으로 표시 (색상 = 샤프지수)
+scatter = plt.scatter(
+    all_volatility,
+    all_returns,
+    c=all_sharpe,
+    cmap="viridis",
+    alpha=0.5,
+    s=5
+)
+plt.colorbar(scatter, label="Sharpe Ratio")
+
+# 최적 포트폴리오 강조 표시
+plt.scatter(max_sharpe_vol, max_sharpe_return,
+            color="red", marker="*", s=300, label="Max Sharpe Ratio", zorder=5)
+plt.scatter(min_vol_vol, min_vol_return,
+            color="blue", marker="*", s=300, label="Min Volatility", zorder=5)
+
+plt.title("Monte Carlo Simulation - Efficient Frontier", fontsize=14)
+plt.xlabel("Volatility (Risk)")
+plt.ylabel("Expected Return")
+plt.legend()
+plt.tight_layout()
+plt.savefig("monte_carlo_result.png", dpi=150)
+plt.show()</span></pre>
+        </div>
+
+        <div class="code-stage-notes">
+          <div class="code-step" style="--step-delay: 0s;">
+            <div class="card dark-blue">
+              <h3>전체 구조</h3>
+              <p class="small" style="color: rgba(255,255,255,0.84); margin-top:14px;">
+                먼저 전체 코드를 한 번에 보여주고, 아래 방향으로 내려가며 핵심 기능을 확대한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 4.8s;">
+            <div class="card">
+              <h3>데이터 준비</h3>
+              <p class="small" style="margin-top:14px;">
+                네 자산의 종가를 가져오고, 가격 데이터를 일일 수익률로 변환한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 9.8s;">
+            <div class="card">
+              <h3>비중과 수익률 계산</h3>
+              <p class="small" style="margin-top:14px;">
+                무작위 투자 비중을 만들고, 각 종목의 평균 일일수익률을 이용해 포트폴리오 기대수익률을 계산한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 15s;">
+            <div class="card">
+              <h3>변동성 계산</h3>
+              <p class="small" style="margin-top:14px;">
+                두 종목이 함께 움직이는 정도인 공분산을 이용해 포트폴리오의 연간 변동성을 계산한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 20.2s;">
+            <div class="card">
+              <h3>샤프지수 계산</h3>
+              <p class="small" style="margin-top:14px;">
+                수익률에서 무위험 수익률을 뺀 뒤 변동성으로 나누어 위험 대비 수익을 구한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 25.4s;">
+            <div class="card dark-blue">
+              <h3>반복 시뮬레이션</h3>
+              <p class="small" style="color: rgba(255,255,255,0.84); margin-top:14px;">
+                10,000번 동안 무작위 비중을 만들고, 각 포트폴리오의 성과 지표를 저장한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 30.6s;">
+            <div class="card">
+              <h3>최적 조합 출력</h3>
+              <p class="small" style="margin-top:14px;">
+                샤프지수가 가장 높은 조합과 변동성이 가장 낮은 조합을 찾아 결과를 출력한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 35.8s;">
+            <div class="card">
+              <h3>그래프 시각화</h3>
+              <p class="small" style="margin-top:14px;">
+                모든 후보 포트폴리오를 산점도로 표시하고, 최적 조합을 별표로 강조한다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide" data-slide="16">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">데이터 구성</div>
+          <h2>분석 데이터</h2>
+        </div>
+      </div>
+
+      <div class="content two-col">
+        <div class="card">
+          <h3>노트북에서 사용한 데이터</h3>
+          <div class="check-list" style="margin-top:22px;">
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>분석 대상</h3>
+                <p class="small">삼성전자, SK하이닉스, KODEX200, 카카오</p>
+              </div>
+            </div>
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>분석 기간</h3>
+                <p class="small">2022-01-01부터 2024-12-31까지</p>
+              </div>
+            </div>
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>데이터 출처</h3>
+                <p class="small">yfinance에서 auto_adjust=True로 수정 종가 다운로드</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card soft">
+          <h3>사용 변수</h3>
+          <table class="readable-table">
+            <thead>
+              <tr>
+                <th>변수</th>
+                <th>역할</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>종가 P<sub>t</sub></td>
+                <td>일일 수익률 계산의 기준</td>
+              </tr>
+              <tr>
+                <td>비중 w<sub>i</sub></td>
+                <td>각 종목에 투자하는 비율, 합계는 1</td>
+              </tr>
+              <tr>
+                <td>수익률 r<sub>t</sub></td>
+                <td>기대수익률과 공분산 계산의 핵심 입력</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="tiny" style="margin-top:16px;">
+            노트북에서는 pct_change()로 일일 수익률을 만들고 결측치를 제거한 뒤 시뮬레이션에 사용한다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 17. 일일 수익률
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 17. 여기부터 17번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 9번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="17">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">일일 수익률 변환</div>
+          <h2>일일 수익률</h2>
+        </div>
+      </div>
+
+      <div class="content two-col wide-left">
+        <div>
+          <div class="formula big">
+            r<sub>t</sub> = (P<sub>t</sub> - P<sub>t-1</sub>) / P<sub>t-1</sub>
+          </div>
+
+          <div class="card" style="margin-top:24px;">
+            <h3>왜 가격이 아니라 수익률을 쓰는가?</h3>
+            <div class="pill-row">
+              <span class="pill">종목별 가격 단위 차이 제거</span>
+              <span class="pill teal">평균 수익률 계산 가능</span>
+              <span class="pill orange">공분산과 변동성 계산 가능</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card dark-blue">
+          <h3>포트폴리오 성과와 연결</h3>
+          <p class="lead" style="color: rgba(255,255,255,0.88);">
+            각 종목의 평균 일일 수익률과 비중을 곱해<br />
+            포트폴리오의 연간 기대수익률을 계산한다.
+          </p>
+          <div class="formula" style="margin-top:24px; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); color:#fff;">
+            R<sub>p</sub> = 252 × Σ w<sub>i</sub> mean(r<sub>i</sub>)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 19. 공분산과 상관계수
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 19. 여기부터 19번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 11번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="18">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">공분산과 상관관계</div>
+          <h2>공분산과 상관계수</h2>
+        </div>
+      </div>
+
+      <div class="content two-col wide-left">
+        <div class="covariance-visual">
+          <div class="movement-card">
+            <svg class="movement-chart" viewBox="0 0 520 200" role="img" aria-label="두 자산이 같은 방향으로 움직이는 예시">
+              <line class="grid-line" x1="20" y1="50" x2="500" y2="50"></line>
+              <line class="grid-line" x1="20" y1="100" x2="500" y2="100"></line>
+              <line class="grid-line" x1="20" y1="150" x2="500" y2="150"></line>
+              <path class="asset-a" d="M30 140 C80 118, 120 122, 165 92 S245 48, 300 72 S395 120, 490 42"></path>
+              <path class="asset-b" d="M30 154 C78 126, 126 132, 165 104 S250 62, 306 84 S390 134, 490 56"></path>
+            </svg>
+            <div class="movement-copy">
+              <span class="tag">상관계수 +</span>
+              <h3>같이 움직임</h3>
+              <p class="small">둘 다 오르거나 둘 다 떨어지는 날이 많다. 섞어도 위험이 크게 줄지 않는다.</p>
+            </div>
+          </div>
+
+          <div class="movement-card">
+            <svg class="movement-chart" viewBox="0 0 520 200" role="img" aria-label="두 자산이 반대 방향으로 움직이는 예시">
+              <line class="grid-line" x1="20" y1="50" x2="500" y2="50"></line>
+              <line class="grid-line" x1="20" y1="100" x2="500" y2="100"></line>
+              <line class="grid-line" x1="20" y1="150" x2="500" y2="150"></line>
+              <path class="asset-a" d="M30 145 C82 122, 118 132, 168 86 S252 54, 306 82 S394 124, 490 46"></path>
+              <path class="asset-b" d="M30 52 C80 78, 120 68, 168 118 S250 146, 306 116 S394 76, 490 142"></path>
+            </svg>
+            <div class="movement-copy">
+              <span class="tag">상관계수 -</span>
+              <h3>반대로 움직임</h3>
+              <p class="small">하나가 흔들릴 때 다른 하나가 완충한다. 포트폴리오 위험을 줄이는 데 유리하다.</p>
+            </div>
+          </div>
+
+          <div class="movement-card">
+            <svg class="movement-chart" viewBox="0 0 520 200" role="img" aria-label="두 자산의 움직임 관계가 약한 예시">
+              <line class="grid-line" x1="20" y1="50" x2="500" y2="50"></line>
+              <line class="grid-line" x1="20" y1="100" x2="500" y2="100"></line>
+              <line class="grid-line" x1="20" y1="150" x2="500" y2="150"></line>
+              <path class="asset-a" d="M30 132 C70 84, 118 74, 158 108 S230 150, 280 86 S352 54, 410 96 S462 142, 490 118"></path>
+              <path class="asset-b" d="M30 76 C68 110, 96 146, 138 116 S206 70, 242 118 S300 128, 338 82 S398 108, 430 62 S470 92, 490 74"></path>
+            </svg>
+            <div class="movement-copy">
+              <span class="tag">상관계수 0 근처</span>
+              <h3>관계가 약함</h3>
+              <p class="small">같이 오르내리는 규칙도, 반대로 움직이는 규칙도 약하다. 일부 분산 효과를 기대할 수 있다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card soft risk-summary">
+          <h3>공분산은 왜 필요한가?</h3>
+          <p class="lead">
+            포트폴리오의 위험은 종목별 변동성만으로 정해지지 않는다.
+            <span class="highlight">서로 어떻게 같이 움직이는지</span>까지 봐야 한다.
+          </p>
+          <div class="formula">
+            Risk = 각 종목의 흔들림 + 종목끼리 함께 움직이는 정도
+          </div>
+          <div class="check-list">
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>같이 움직이면</h3>
+                <p class="small">위험이 겹쳐서 분산 효과가 작다.</p>
+              </div>
+            </div>
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>다르게 움직이면</h3>
+                <p class="small">한쪽 손실을 다른 쪽이 완충할 수 있다.</p>
+              </div>
+            </div>
+          </div>
+          <p class="tiny">
+            코드에서는 cov(r<sub>i</sub>, r<sub>j</sub>)를 모든 종목쌍에 대해 계산해 포트폴리오 변동성에 반영한다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 20. 포트폴리오 후보 생성
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 20. 여기부터 20번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 12번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="19">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">포트폴리오 후보 생성</div>
+          <h2>후보 포트폴리오</h2>
+        </div>
+      </div>
+
+      <div class="content result-graph-stage">
+        <div class="result-graph-frame">
+          <img src="assets/efficient_frontier_result.png" alt="Monte Carlo Simulation - Efficient Frontier 그래프" />
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 22. 결과 통계량
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 22. 여기부터 22번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 14번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="20">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">시뮬레이션 결과</div>
+          <h2>최종 포트폴리오</h2>
+        </div>
+      </div>
+
+      <div class="content two-col">
+        <div class="card">
+          <div class="pill" style="background:#fee2e2; color:#b91c1c;">샤프지수 최대</div>
+          <h3 style="margin-top:18px;">수익 효율이 가장 좋은 조합</h3>
+          <div class="three-col" style="margin-top:22px; gap:12px;">
+            <div class="metric">
+              <div class="value">17.2%</div>
+              <div class="label">수익률</div>
+            </div>
+            <div class="metric">
+              <div class="value">38.3%</div>
+              <div class="label">변동성</div>
+            </div>
+            <div class="metric">
+              <div class="value">0.37</div>
+              <div class="label">샤프지수</div>
+            </div>
+          </div>
+          <table class="readable-table" style="margin-top:20px;">
+            <tbody>
+              <tr><td>삼성전자</td><td>5.6%</td></tr>
+              <tr><td>SK하이닉스</td><td>92.8%</td></tr>
+              <tr><td>KODEX200</td><td>0.3%</td></tr>
+              <tr><td>카카오</td><td>1.2%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card soft">
+          <div class="pill teal">변동성 최소</div>
+          <h3 style="margin-top:18px;">가장 안정적인 조합</h3>
+          <div class="three-col" style="margin-top:22px; gap:12px;">
+            <div class="metric">
+              <div class="value">-4.2%</div>
+              <div class="label">수익률</div>
+            </div>
+            <div class="metric">
+              <div class="value">18.9%</div>
+              <div class="label">변동성</div>
+            </div>
+            <div class="metric">
+              <div class="value">-0.38</div>
+              <div class="label">샤프지수</div>
+            </div>
+          </div>
+          <table class="readable-table" style="margin-top:20px;">
+            <tbody>
+              <tr><td>삼성전자</td><td>3.2%</td></tr>
+              <tr><td>SK하이닉스</td><td>0.6%</td></tr>
+              <tr><td>KODEX200</td><td>93.7%</td></tr>
+              <tr><td>카카오</td><td>2.4%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 23. 샤프지수 해석
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 23. 여기부터 23번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 15번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="21">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">샤프지수 해석 기준</div>
+          <h2>샤프지수</h2>
+        </div>
+      </div>
+
+      <div class="content two-col wide-right">
+        <div class="card">
+          <h3>예시 해석</h3>
+          <p class="body" style="margin-top:20px;">
+            샤프지수가 높다는 것은 같은 위험을 감수했을 때
+            <span class="highlight">더 높은 초과수익</span>을 얻는다는 뜻이다.
+          </p>
+
+          <div class="loss-zone">
+            <p class="body">
+              노트북은 10,000개의 무작위 포트폴리오 중<br />
+              <b>샤프지수 최대 조합</b>과 <b>변동성 최소 조합</b>을 따로 찾는다.
+            </p>
+            <div class="loss-scale">
+              <span>낮은 효율</span>
+              <span>샤프지수</span>
+              <span>높은 효율</span>
+            </div>
+          </div>
+
+          <p class="small" style="margin-top:22px;">
+            이번 결과에서는 샤프지수 최대 조합이 SK하이닉스 중심으로 나타났고,
+            변동성 최소 조합은 KODEX200 중심으로 나타났다.
+          </p>
+        </div>
+
+        <div>
+          <div class="chart-shell tall">
+            <canvas id="varChart" aria-label="포트폴리오 샤프지수 비교 차트"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 24. 수렴 검증
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 24. 여기부터 24번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 16번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide convergence-slide" data-slide="22">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">수렴 여부 검증</div>
+          <h2>수렴 검증</h2>
+        </div>
+      </div>
+
+      <div class="content two-col wide-right">
+        <div class="card">
+          <h3>10,000번이 충분한 이유</h3>
+          <p class="small" style="margin-top:14px;">
+            시행 횟수가 늘어날수록 더 좋은 포트폴리오가 발견되면 최고 샤프지수가 갱신된다.
+            그래프에서는 약 3,000회 이후 최고값이 0.37 근처에서 더 이상 크게 변하지 않는다.
+          </p>
+
+          <div class="formula" style="margin-top:22px;">
+            Max Sharpe ≈ 0.37
+          </div>
+
+          <div class="sim-control" aria-label="시뮬레이션 횟수 선택">
+            <button class="sim-btn" data-n="1000">1,000회</button>
+            <button class="sim-btn" data-n="3000">3,000회</button>
+            <button class="sim-btn active" data-n="10000">10,000회</button>
+          </div>
+
+          <div class="three-col" style="margin-top:20px; gap:12px;">
+            <div class="metric">
+              <div class="value" id="simLoss">10k</div>
+              <div class="label">시행 횟수</div>
+            </div>
+            <div class="metric">
+              <div class="value" id="simVar">0.37</div>
+              <div class="label">최고 샤프지수</div>
+            </div>
+            <div class="metric">
+              <div class="value" id="simSe">안정</div>
+              <div class="label">판단</div>
+            </div>
+          </div>
+
+          <div class="check-list" style="margin-top:22px;">
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>안정화 확인</h3>
+                <p class="small">최고 샤프지수 곡선이 3,000회 이후 거의 수평으로 유지된다.</p>
+              </div>
+            </div>
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>판단 기준</h3>
+                <p class="small">추가 시행을 해도 최고값이 갱신되지 않으면 충분한 탐색으로 본다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-shell tall">
+          <canvas id="convergenceChart" aria-label="시뮬레이션 횟수별 최적 샤프지수 변화 차트"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 27. 모델 한계
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 27. 여기부터 27번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 19번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="23">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">모델의 한계</div>
+          <h2>모델 한계</h2>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="limitation-grid">
+          <div class="card">
+            <div class="mini-icon orange-bg">1</div>
+            <h3>과거 의존</h3>
+            <p class="small">과거 평균 수익률과 공분산이 미래에도 유지된다고 가정한다.</p>
+          </div>
+
+          <div class="card">
+            <div class="mini-icon orange-bg">2</div>
+            <h3>팻 테일 미반영</h3>
+            <p class="small">실제 금융시장에서는 극단적 급락과 급등이 더 자주 발생할 수 있다.</p>
+          </div>
+
+          <div class="card">
+            <div class="mini-icon orange-bg">3</div>
+            <h3>상관관계 고정</h3>
+            <p class="small">위기 상황에서는 자산들이 동시에 하락해 분산 효과가 약해질 수 있다.</p>
+          </div>
+
+          <div class="card">
+            <div class="mini-icon orange-bg">4</div>
+            <h3>샤프지수 한계</h3>
+            <p class="small">전체 변동성만 위험으로 보기 때문에 큰 손실 위험을 따로 보지 못한다.</p>
+          </div>
+
+          <div class="card">
+            <div class="mini-icon orange-bg">5</div>
+            <h3>근사적 최적화</h3>
+            <p class="small">무작위 후보 중 최선일 뿐, 수학적 전역 최적해를 보장하지 않는다.</p>
+          </div>
+
+          <div class="card">
+            <div class="mini-icon orange-bg">6</div>
+            <h3>현실 제약 제외</h3>
+            <p class="small">거래비용, 세금, 유동성, 리밸런싱 비용은 모델에 포함하지 않았다.</p>
+          </div>
+        </div>
+
+        <div class="card dark-blue model-fix-card">
+          <h3>실제 금융에서는 어떻게 보완하는가</h3>
+          <p class="small" style="color: rgba(255,255,255,0.82); margin-top:10px;">
+            단순 평균-분산 분석만으로는 예외적 시장 상황의 위험을 과소평가할 수 있다.
+            그래서 실제 분석에서는 팻 테일, 시간에 따라 변하는 변동성, 하방위험을 함께 반영한다.
+          </p>
+          <div class="pill-row">
+            <span class="pill">t-분포</span>
+            <span class="pill teal">부트스트래핑</span>
+            <span class="pill orange">GARCH</span>
+            <span class="pill">VaR · CVaR</span>
+            <span class="pill teal">거래비용 반영</span>
+            <span class="pill orange">제약조건 최적화</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      SLIDE 28. 결론
+      ========================================================= -->
+    <!-- =========================================================
+      SLIDE 28. 여기부터 28번 슬라이드입니다.
+      - 이 주석 아래의 <section> 전체가 28번 슬라이드 내용입니다.
+      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
+      ========================================================= -->
+    <section class="slide" data-slide="24">
+      <div class="slide-header">
+        <div>
+          <div class="kicker">결론 및 시사점</div>
+          <h2>결론</h2>
+        </div>
+      </div>
+
+      <div class="content two-col wide-left">
+        <div class="card dark-blue">
+          <h3>한 줄 결론</h3>
+          <p class="lead" style="color: rgba(255,255,255,0.9);">
+            몬테카를로 시뮬레이션은 불확실한 상황을 여러 번 만들어 보고,
+            그 결과의 <b>평균·분포·최적 후보</b>를 통해 의사결정을 돕는 방법이다.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>이번 예시에서 확인한 것</h3>
+          <div class="check-list" style="margin-top:22px;">
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>반복 실험의 의미</h3>
+                <p class="small">무작위 후보를 많이 만들수록 결과가 안정적인 추정값에 가까워진다.</p>
+              </div>
+            </div>
+            <div class="check-item">
+              <div class="check-mark">✓</div>
+              <div>
+                <h3>결과의 해석</h3>
+                <p class="small">빨간 별은 위험 대비 수익이 좋은 조합, 파란 별은 가장 안정적인 조합을 의미한다.</p>
+              </div>
+            </div>
+            <div class="check-item">
+              <div class="warning-mark">!</div>
+              <div>
+                <h3>해석의 한계</h3>
+                <p class="small">결과는 과거 데이터와 모델 가정에 의존하므로 미래를 보장하지 않는다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card flat" style="grid-column: 1 / -1; padding: 20px 26px;">
+          <h3 style="font-size: clamp(21px, 1.6vw, 26px);">최종 메시지</h3>
+          <p class="lead" style="margin-top:10px;">
+            몬테카를로 방법의 핵심은 하나의 답을 맞히는 것이 아니라,
+            가능한 경우를 충분히 많이 만들어 <span class="highlight">불확실성을 숫자로 비교</span>하는 데 있다.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="graph-modal" id="graphModal" data-mode="single" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="graphModalTitle">
+    <div class="graph-modal-panel">
+      <div class="graph-modal-head">
+        <div>
+          <span class="tag" id="graphModalTag">단일 예측</span>
+          <h3 id="graphModalTitle" style="margin-top:14px;">하나의 결과만 보여주는 방식</h3>
+          <p class="graph-modal-copy" id="graphModalCopy">
+            선은 왼쪽에서 오른쪽으로 한 번만 그려지고, 마지막 점 하나가 예측값처럼 강조됩니다.
+          </p>
+        </div>
+        <button class="modal-close" id="graphModalClose" type="button" aria-label="확대 그래프 닫기">×</button>
+      </div>
+
+      <div class="modal-visual single-expanded" aria-label="단일 예측 확대 애니메이션">
+        <div class="chart-grid" aria-hidden="true">
+          <span class="grid-line" data-label="+12%"></span>
+          <span class="grid-line" data-label="+6%"></span>
+          <span class="grid-line" data-label="0%"></span>
+          <span class="grid-line" data-label="-6%"></span>
+          <span class="grid-axis-label">수익률</span>
+        </div>
+        <svg class="expanded-svg" viewBox="0 0 1000 460" preserveAspectRatio="none" role="img">
+          <path class="draw-line" d="M90 280 C220 260 350 242 510 210 C665 180 785 156 910 132" />
+          <circle class="forecast-point" cx="910" cy="132" r="18" fill="#2656d9" />
+          <text x="876" y="106" fill="#2656d9" font-size="24" font-weight="900">+3%</text>
+        </svg>
+      </div>
+
+      <div class="modal-visual distribution-expanded" aria-label="분포 기반 분석 확대 애니메이션">
+        <div class="chart-grid" aria-hidden="true">
+          <span class="grid-line" data-label="+12%"></span>
+          <span class="grid-line" data-label="+6%"></span>
+          <span class="grid-line" data-label="0%"></span>
+          <span class="grid-line" data-label="-6%"></span>
+          <span class="grid-axis-label">수익률</span>
+        </div>
+        <svg class="expanded-svg" viewBox="0 0 1000 460" preserveAspectRatio="none" role="img">
+          <path class="draw-line" d="M80 230 C200 160 310 185 450 92 C610 0 760 62 910 38" stroke="#2656d9" />
+          <path class="draw-line" d="M80 230 C205 252 330 205 470 195 C630 178 760 192 910 165" stroke="#0ea5a8" />
+          <path class="draw-line" d="M80 230 C205 305 330 268 470 310 C620 360 760 318 910 350" stroke="#ef4444" />
+          <path class="draw-line" d="M80 230 C190 185 330 270 470 245 C620 225 760 255 910 270" stroke="#f97316" />
+          <path class="draw-line" d="M80 230 C210 210 330 130 470 155 C620 168 760 102 910 105" stroke="#7c3aed" />
+        </svg>
+
+        <span class="drop-dot" aria-hidden="true"></span>
+        <span class="drop-dot" aria-hidden="true"></span>
+        <span class="drop-dot" aria-hidden="true"></span>
+        <span class="drop-dot" aria-hidden="true"></span>
+        <span class="drop-dot" aria-hidden="true"></span>
+
+        <div class="distribution-bars" aria-label="포트폴리오 성과 분포 막대그래프">
+          <div class="bar-column" style="--d: 3020ms;">
+            <span class="bar-value">8</span>
+            <span class="dist-bar loss" style="--h: 34%; --d: 3020ms;"></span>
+            <span class="bar-label">-12%</span>
+          </div>
+          <div class="bar-column" style="--d: 3100ms;">
+            <span class="bar-value">18</span>
+            <span class="dist-bar loss" style="--h: 58%; --d: 3100ms;"></span>
+            <span class="bar-label">-8%</span>
+          </div>
+          <div class="bar-column" style="--d: 3180ms;">
+            <span class="bar-value">24</span>
+            <span class="dist-bar" style="--h: 76%; --d: 3180ms;"></span>
+            <span class="bar-label">-4%</span>
+          </div>
+          <div class="bar-column" style="--d: 3260ms;">
+            <span class="bar-value">31</span>
+            <span class="dist-bar" style="--h: 96%; --d: 3260ms;"></span>
+            <span class="bar-label">0%</span>
+          </div>
+          <div class="bar-column" style="--d: 3340ms;">
+            <span class="bar-value">26</span>
+            <span class="dist-bar" style="--h: 82%; --d: 3340ms;"></span>
+            <span class="bar-label">+4%</span>
+          </div>
+          <div class="bar-column" style="--d: 3420ms;">
+            <span class="bar-value">16</span>
+            <span class="dist-bar" style="--h: 54%; --d: 3420ms;"></span>
+            <span class="bar-label">+8%</span>
+          </div>
+          <div class="bar-column" style="--d: 3500ms;">
+            <span class="bar-value">6</span>
+            <span class="dist-bar" style="--h: 28%; --d: 3500ms;"></span>
+            <span class="bar-label">+12%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+    하단 내비게이션 UI
+    ========================================================= -->
+  <div class="nav-ui" aria-label="슬라이드 이동 컨트롤">
+    <div class="nav-buttons">
+      <button class="nav-btn" id="prevBtn" type="button" aria-label="이전 슬라이드">←</button>
+      <button class="nav-btn primary" id="nextBtn" type="button" aria-label="다음 슬라이드">다음 →</button>
+      <button class="nav-btn" id="fullscreenBtn" type="button" aria-label="전체화면">전체화면</button>
+    </div>
+
+    <div class="dots" id="dots" aria-label="슬라이드 진행 표시"></div>
+
+    <div class="counter">
+      <span id="currentSlide">1</span> / <span id="totalSlides">24</span>
+    </div>
+  </div>
+
+  <div class="progress-bar" aria-hidden="true">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <script>
+    /* =========================================================
+      1. 슬라이드 이동 로직
+      - 방향키, 버튼, 하단 점 클릭을 지원합니다.
+      ========================================================= */
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    const dotsContainer = document.getElementById("dots");
+    const currentSlideEl = document.getElementById("currentSlide");
+    const totalSlidesEl = document.getElementById("totalSlides");
+    const progressFill = document.getElementById("progressFill");
+
+    let currentIndex = 0;
+      const maxCodeStep = 7;
+
+    totalSlidesEl.textContent = slides.length;
+
+    function makeRandomCoinFaces(total) {
+      const faces = [];
+
+      for (let index = 0; index < total; index += 1) {
+        faces.push(Math.random() < 0.5);
+      }
+
+      return faces;
+    }
+
+    function renderCoinField(field, facesOverride) {
+        const total = Number(field.dataset.coins || 0);
+        const fixedHeads = Number(field.dataset.heads || 0);
+        const faces = Array.isArray(facesOverride)
+          ? facesOverride
+          : Array.from({ length: total }, (_, index) => index < fixedHeads);
+        const heads = faces.filter(Boolean).length;
+        const label = field.dataset.label || "동전 배열";
+
+        field.setAttribute("role", "img");
+        field.setAttribute("aria-label", `${label}, 앞면 ${heads}개`);
+        field.innerHTML = "";
+        field.dataset.heads = String(heads);
+
+        if (field.dataset.resultTarget) {
+          const resultTarget = document.getElementById(field.dataset.resultTarget);
+          if (resultTarget) resultTarget.textContent = `앞면 ${heads} / ${total}`;
+        }
+
+        for (let index = 0; index < total; index += 1) {
+          const coin = document.createElement("span");
+          const isHead = faces[index];
+          coin.className = `seq-coin ${isHead ? "head" : "tail"}`;
+          coin.dataset.face = isHead ? "앞" : "뒤";
+          coin.textContent = field.classList.contains("many") ? "" : (isHead ? "1" : "0");
+          coin.style.setProperty("--delay", `${Math.min(index * 34, 1800)}ms`);
+          field.appendChild(coin);
+        }
+    }
+
+    function initCoinFields() {
+      document.querySelectorAll(".coin-field[data-coins]").forEach((field) => {
+        if (field.dataset.randomHeads === "true") {
+          renderCoinField(field, makeRandomCoinFaces(Number(field.dataset.coins || 0)));
+          return;
+        }
+
+        renderCoinField(field);
+      });
+    }
+
+    function restartSlideMotion(slide) {
+      if (!slide.classList.contains("coin-sequence-slide") && !slide.classList.contains("code-animation-slide")) return;
+
+      if (slide.classList.contains("coin-sequence-slide")) {
+        slide.querySelectorAll(".coin-field[data-random-heads='true']").forEach((field) => {
+          renderCoinField(field, makeRandomCoinFaces(Number(field.dataset.coins || 0)));
+        });
+      }
+
+      slide.classList.remove("motion-ready");
+      void slide.offsetWidth;
+      slide.classList.add("motion-ready");
+    }
+
+    function setCodeStep(slide, step) {
+      const safeStep = Math.max(0, Math.min(step, maxCodeStep));
+
+      slide.classList.remove("code-step-0", "code-step-1", "code-step-2", "code-step-3", "code-step-4", "code-step-5", "code-step-6", "code-step-7");
+      slide.classList.add(`code-step-${safeStep}`);
+      slide.dataset.codeStep = String(safeStep);
+      focusCodeSection(slide, safeStep);
+    }
+
+    function focusCodeSection(slide, step) {
+      const pre = slide.querySelector(".code-map.auto-zoom pre");
+      const map = slide.querySelector(".code-map.auto-zoom");
+
+      if (!pre || !map) return;
+
+      if (step === 0) {
+        pre.style.removeProperty("--code-pan");
+        return;
+      }
+
+      const targets = ["", ".code-data", ".code-functions-a", ".code-volatility", ".code-sharpe", ".code-loop", ".code-result-a", ".code-result-b"];
+      const selector = targets[step];
+
+      const updatePan = () => {
+        if (slide.dataset.codeStep !== String(step)) return;
+
+        const target = slide.querySelector(selector);
+        if (!target) return;
+
+        const scale = parseFloat(getComputedStyle(pre).getPropertyValue("--code-scale")) || 1;
+        const mapHeight = map.clientHeight;
+        const targetTop = target.offsetTop;
+        const targetHeight = target.offsetHeight * scale;
+        const targetFits = targetHeight < mapHeight * 0.78;
+        const preferredTop = targetFits
+          ? Math.max(28, (mapHeight - targetHeight) / 2)
+          : 34;
+        const pan = preferredTop - targetTop * scale;
+
+        pre.style.setProperty("--code-pan", `${Math.round(pan)}px`);
+      };
+
+      requestAnimationFrame(updatePan);
+      window.setTimeout(updatePan, 760);
+    }
+
+    function currentCodeSlide() {
+      const slide = slides[currentIndex];
+      return slide.classList.contains("code-animation-slide") ? slide : null;
+    }
+
+    initCoinFields();
+
+    slides.forEach((_, index) => {
+      const dot = document.createElement("button");
+      dot.className = "dot";
+      dot.type = "button";
+      dot.setAttribute("aria-label", `${index + 1}번 슬라이드로 이동`);
+      dot.addEventListener("click", () => goToSlide(index));
+      dotsContainer.appendChild(dot);
+    });
+
+    const dots = Array.from(document.querySelectorAll(".dot"));
+
+    function goToSlide(index) {
+      const safeIndex = Math.max(0, Math.min(index, slides.length - 1));
+
+      slides[currentIndex].classList.remove("active");
+      dots[currentIndex].classList.remove("active");
+
+      currentIndex = safeIndex;
+
+      slides[currentIndex].classList.add("active");
+      dots[currentIndex].classList.add("active");
+
+      currentSlideEl.textContent = currentIndex + 1;
+      progressFill.style.width = `${((currentIndex + 1) / slides.length) * 100}%`;
+
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === slides.length - 1;
+      nextBtn.textContent = currentIndex === slides.length - 1 ? "마침" : "다음 →";
+
+      if (slides[currentIndex].classList.contains("code-animation-slide")) {
+        setCodeStep(slides[currentIndex], 0);
+      }
+
+      restartSlideMotion(slides[currentIndex]);
+    }
+
+    function nextSlide() {
+      const codeSlide = currentCodeSlide();
+      if (codeSlide) {
+        const currentStep = Number(codeSlide.dataset.codeStep || 0);
+        if (currentStep < maxCodeStep) {
+          setCodeStep(codeSlide, currentStep + 1);
+          return;
+        }
+      }
+
+      if (currentIndex < slides.length - 1) goToSlide(currentIndex + 1);
+    }
+
+    function prevSlide() {
+      const codeSlide = currentCodeSlide();
+      if (codeSlide) {
+        const currentStep = Number(codeSlide.dataset.codeStep || 0);
+        if (currentStep > 0) {
+          setCodeStep(codeSlide, currentStep - 1);
+          return;
+        }
+      }
+
+      if (currentIndex > 0) goToSlide(currentIndex - 1);
+    }
+
+    prevBtn.addEventListener("click", prevSlide);
+    nextBtn.addEventListener("click", nextSlide);
+
+    document.querySelector(".deck").addEventListener("click", (event) => {
+      if (event.defaultPrevented) return;
+      if (document.body.classList.contains("graph-modal-open")) return;
+      if (event.target.closest("button, a, [data-graph-open], input, select, textarea")) return;
+
+      nextSlide();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.defaultPrevented) return;
+
+      if (document.body.classList.contains("graph-modal-open")) {
+        if (event.key === "Escape") {
+          closeGraphModal();
+        }
+        event.preventDefault();
+        return;
+      }
+
+      if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        nextSlide();
+      }
+
+      if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        prevSlide();
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+        goToSlide(0);
+      }
+
+      if (event.key === "End") {
+        event.preventDefault();
+        goToSlide(slides.length - 1);
+      }
+    });
+
+    fullscreenBtn.addEventListener("click", async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          fullscreenBtn.textContent = "전체화면 해제";
+        } else {
+          await document.exitFullscreen();
+          fullscreenBtn.textContent = "전체화면";
+        }
+      } catch (error) {
+        alert("브라우저에서 전체화면 전환을 허용하지 않았습니다. F11 키를 사용해 주세요.");
+      }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 해제" : "전체화면";
+    });
+
+    /* =========================================================
+      2. 문제제기 슬라이드 확대 그래프
+      - 단일 예측과 분포 기반 분석 그래프를 클릭하면 확대 애니메이션을 보여줍니다.
+      ========================================================= */
+    const graphModal = document.getElementById("graphModal");
+    const graphModalTag = document.getElementById("graphModalTag");
+    const graphModalTitle = document.getElementById("graphModalTitle");
+    const graphModalCopy = document.getElementById("graphModalCopy");
+    const graphModalClose = document.getElementById("graphModalClose");
+
+    const graphModalText = {
+      single: {
+        tag: "단일 예측",
+        title: "하나의 결과만 보여주는 방식",
+        copy: "선은 왼쪽에서 오른쪽으로 한 번만 그려지고, 마지막 점 하나가 예측값처럼 강조됩니다."
+      },
+      distribution: {
+        tag: "분포 기반 분석",
+        title: "여러 비중 조합이 포트폴리오 성과 분포로 바뀌는 과정",
+        copy: "무작위 투자 비중이 반복 생성된 뒤, 각 조합의 수익률과 변동성이 계산되어 비교 가능한 후보군으로 집계됩니다."
+      }
+    };
+
+    function openGraphModal(mode) {
+      const selected = graphModalText[mode] || graphModalText.single;
+      graphModal.dataset.mode = mode;
+      graphModalTag.textContent = selected.tag;
+      graphModalTitle.textContent = selected.title;
+      graphModalCopy.textContent = selected.copy;
+      graphModal.setAttribute("aria-hidden", "false");
+
+      document.body.classList.remove("graph-modal-open");
+      void graphModal.offsetWidth;
+      document.body.classList.add("graph-modal-open");
+      graphModalClose.focus();
+    }
+
+    function closeGraphModal() {
+      document.body.classList.remove("graph-modal-open");
+      graphModal.setAttribute("aria-hidden", "true");
+    }
+
+    document.querySelectorAll("[data-graph-open]").forEach((card) => {
+      card.addEventListener("click", () => openGraphModal(card.dataset.graphOpen));
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          openGraphModal(card.dataset.graphOpen);
+        }
+      });
+    });
+
+    graphModalClose.addEventListener("click", closeGraphModal);
+    graphModal.addEventListener("click", (event) => {
+      if (event.target === graphModal) closeGraphModal();
+    });
+
+    /* =========================================================
+      3. Chart.js 공통 옵션
+      - 차트 데이터는 여기서 쉽게 수정할 수 있습니다.
+      ========================================================= */
+    const chartFont = {
+      family: 'Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
+      size: 14,
+      weight: "700"
+    };
+
+    const chartGridColor = "rgba(99, 112, 131, 0.16)";
+    const chartTickColor = "#637083";
+
+    function baseChartOptions(extraOptions = {}) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              font: chartFont,
+              color: chartTickColor,
+              usePointStyle: true,
+              boxWidth: 10
+            }
+          },
+          tooltip: {
+            titleFont: chartFont,
+            bodyFont: chartFont,
+            padding: 12,
+            backgroundColor: "rgba(20, 33, 61, 0.92)"
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: chartGridColor },
+            ticks: { color: chartTickColor, font: chartFont }
+          },
+          y: {
+            grid: { color: chartGridColor },
+            ticks: { color: chartTickColor, font: chartFont }
+          }
+        },
+        ...extraOptions
+      };
+    }
+
+    /* =========================================================
+      4. 강조 기준선 플러그인
+      - 필요할 때 특정 위치를 강조하는 보조 플러그인입니다.
+      ========================================================= */
+    const varMarkerPlugin = {
+      id: "varMarkerPlugin",
+      afterDatasetsDraw(chart, args, pluginOptions) {
+        if (!pluginOptions || typeof pluginOptions.tickIndex !== "number") return;
+
+        const { ctx, chartArea, scales } = chart;
+        const x = scales.x.getPixelForTick(pluginOptions.tickIndex);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top + 6);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#ef4444";
+        ctx.setLineDash([8, 6]);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ef4444";
+        ctx.font = "800 14px Pretendard, sans-serif";
+        ctx.fillText("기준점", x + 10, chartArea.top + 22);
+        ctx.restore();
+      }
+    };
+
+    if (window.Chart) {
+      Chart.defaults.font.family = 'Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif';
+      initCharts();
+    }
+
+    function initCharts() {
+      /* 대수의 법칙 차트 */
+      new Chart(document.getElementById("llnChart"), {
+        type: "line",
+        data: {
+          labels: ["10", "50", "100", "500", "1,000", "5,000", "10,000"],
+          datasets: [
+            {
+              label: "표본평균 추정값",
+              data: [0.70, 0.58, 0.54, 0.512, 0.506, 0.501, 0.499],
+              borderColor: "#2656d9",
+              backgroundColor: "rgba(38, 86, 217, 0.12)",
+              borderWidth: 4,
+              tension: 0.35,
+              fill: true,
+              pointRadius: 5
+            },
+            {
+              label: "실제 기대값",
+              data: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+              borderColor: "#ef4444",
+              borderWidth: 3,
+              borderDash: [8, 7],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: baseChartOptions({
+          plugins: {
+            legend: {
+              labels: {
+                font: chartFont,
+                color: chartTickColor,
+                usePointStyle: true
+              }
+            },
+            title: {
+              display: true,
+              text: "반복 횟수가 증가할수록 추정값이 안정화",
+              font: { ...chartFont, size: 18 },
+              color: "#14213d"
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "반복 횟수 N", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: { color: chartTickColor, font: chartFont }
+            },
+            y: {
+              min: 0.44,
+              max: 0.74,
+              title: { display: true, text: "추정 평균", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: { color: chartTickColor, font: chartFont }
+            }
+          }
+        })
+      });
+
+      /* 효율적 프론티어 산점도 */
+      if (document.getElementById("pathChart")) {
+      function seededRandom(seed) {
+        let value = seed;
+        return () => {
+          value = (value * 1664525 + 1013904223) % 4294967296;
+          return value / 4294967296;
+        };
+      }
+
+      const randPortfolio = seededRandom(930);
+      const portfolioCloud = Array.from({ length: 900 }, () => {
+        const r1 = randPortfolio();
+        const r2 = randPortfolio();
+        const r3 = randPortfolio();
+        const x = 0.19 + Math.pow(r1, 0.72) * 0.18;
+        const center = -0.075 + (x - 0.19) * 0.92;
+        const spread = 0.018 + (x - 0.19) * 0.34;
+        const y = center + (r2 - 0.50) * spread * 2.7 + (r3 - 0.50) * 0.018;
+        return {
+          x: Math.max(0.185, Math.min(0.385, x)),
+          y: Math.max(-0.275, Math.min(0.175, y))
+        };
+      });
+
+      function portfolioPointColor(point) {
+        const sharpe = (point.y - 0.03) / Math.max(point.x, 0.001);
+        if (sharpe > 0.22) return "rgba(220, 226, 50, 0.72)";
+        if (sharpe > 0.04) return "rgba(93, 204, 123, 0.62)";
+        if (sharpe > -0.25) return "rgba(42, 171, 153, 0.58)";
+        if (sharpe > -0.55) return "rgba(65, 110, 170, 0.54)";
+        return "rgba(91, 40, 132, 0.58)";
+      }
+
+      new Chart(document.getElementById("pathChart"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "무작위 포트폴리오",
+              data: portfolioCloud,
+              backgroundColor: portfolioCloud.map(portfolioPointColor),
+              borderColor: portfolioCloud.map(portfolioPointColor),
+              pointRadius: 3,
+              pointHoverRadius: 5
+            },
+            {
+              label: "샤프지수 최대",
+              data: [{ x: 0.383, y: 0.172 }],
+              backgroundColor: "#ef4444",
+              borderColor: "#ef4444",
+              pointStyle: "star",
+              pointRadius: 16
+            },
+            {
+              label: "변동성 최소",
+              data: [{ x: 0.189, y: -0.042 }],
+              backgroundColor: "#1d4ed8",
+              borderColor: "#1d4ed8",
+              pointStyle: "star",
+              pointRadius: 16
+            }
+          ]
+        },
+        options: baseChartOptions({
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                font: chartFont,
+                color: chartTickColor,
+                usePointStyle: true
+              }
+            },
+            title: {
+              display: true,
+              text: "Monte Carlo Simulation - Efficient Frontier",
+              font: { ...chartFont, size: 18 },
+              color: "#14213d"
+            }
+          },
+          scales: {
+            x: {
+              min: 0.18,
+              max: 0.39,
+              title: { display: true, text: "Volatility (Risk)", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: {
+                color: chartTickColor,
+                font: chartFont,
+                callback: (value) => value.toFixed(3)
+              }
+            },
+            y: {
+              min: -0.28,
+              max: 0.19,
+              title: { display: true, text: "Expected Return", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: {
+                color: chartTickColor,
+                font: chartFont,
+                callback: (value) => value.toFixed(1)
+              }
+            }
+          }
+        })
+      });
+      }
+
+      /* 샤프지수 비교 차트 */
+      const varLabels = ["샤프 최대", "변동성 최소"];
+      const varCounts = [0.37, -0.38];
+
+      new Chart(document.getElementById("varChart"), {
+        type: "bar",
+        data: {
+          labels: varLabels,
+          datasets: [{
+            label: "샤프지수",
+            data: varCounts,
+            backgroundColor: ["rgba(239, 68, 68, 0.72)", "rgba(29, 78, 216, 0.66)"],
+            borderColor: ["#ef4444", "#1d4ed8"],
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
+        options: baseChartOptions({
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: "포트폴리오 유형별 샤프지수 비교",
+              font: { ...chartFont, size: 18 },
+              color: "#14213d"
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "포트폴리오 선택 기준", color: chartTickColor, font: chartFont },
+              grid: { display: false },
+              ticks: { color: chartTickColor, font: chartFont }
+            },
+            y: {
+              min: -0.45,
+              max: 0.45,
+              title: { display: true, text: "샤프지수", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: { color: chartTickColor, font: chartFont }
+            }
+          }
+        })
+      });
+
+      /* 수렴 차트 */
+      const maxSharpeEvolution = [
+        { x: 100, y: 0.132 },
+        { x: 200, y: 0.141 },
+        { x: 300, y: 0.171 },
+        { x: 400, y: 0.233 },
+        { x: 1100, y: 0.233 },
+        { x: 1200, y: 0.304 },
+        { x: 2800, y: 0.304 },
+        { x: 2900, y: 0.371 },
+        { x: 10000, y: 0.371 }
+      ];
+
+      window.convergenceChart = new Chart(document.getElementById("convergenceChart"), {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "최고 샤프지수",
+              data: maxSharpeEvolution,
+              borderColor: "#7e148a",
+              backgroundColor: "rgba(126, 20, 138, 0.10)",
+              borderWidth: 3,
+              tension: 0,
+              stepped: "before",
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: baseChartOptions({
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: "Maximum Sharpe Ratio Evolution Over Simulations",
+              font: { ...chartFont, size: 18 },
+              color: "#14213d"
+            }
+          },
+          scales: {
+            x: {
+              type: "linear",
+              min: 0,
+              max: 10000,
+              title: { display: true, text: "Number of Simulations", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: {
+                color: chartTickColor,
+                font: chartFont,
+                stepSize: 2000,
+                callback: (value) => Number(value).toLocaleString()
+              }
+            },
+            y: {
+              min: 0.12,
+              max: 0.385,
+              title: { display: true, text: "Maximum Sharpe Ratio", color: chartTickColor, font: chartFont },
+              grid: { color: chartGridColor },
+              ticks: {
+                color: chartTickColor,
+                font: chartFont,
+                callback: (value) => value.toFixed(2)
+              }
+            }
+          }
+        })
+      });
+
+    }
+
+    /* =========================================================
+      4. 수렴 슬라이드의 간단한 인터랙션
+      - 버튼을 누르면 예시 통계량이 바뀝니다.
+      ========================================================= */
+    const simData = {
+      "1000": { loss: "1k", var: "0.23", se: "갱신 중" },
+      "3000": { loss: "3k", var: "0.37", se: "안정화" },
+      "10000": { loss: "10k", var: "0.37", se: "안정" }
+    };
+
+    document.querySelectorAll(".sim-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".sim-btn").forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+
+        const selected = simData[button.dataset.n];
+        document.getElementById("simLoss").textContent = selected.loss;
+        document.getElementById("simVar").textContent = selected.var;
+        document.getElementById("simSe").textContent = selected.se;
+      });
+    });
+
+    /* 초기 상태 */
+    goToSlide(0);
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

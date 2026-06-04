@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -1710,7 +1710,7 @@
 
     .code-animation-slide.code-step-0 .code-map.auto-zoom pre {
       top: 0;
-      transform: scale(0.56);
+      transform: scale(var(--code-overview-scale, 0.56));
     }
 
     .code-animation-slide.code-step-1 .code-map.auto-zoom pre {
@@ -1729,13 +1729,15 @@
       --code-scale: 1.16;
     }
 
-    .code-animation-slide.code-step-5 .code-map.auto-zoom pre {
-      --code-scale: 1.16;
+    .code-animation-slide.code-step-5 .code-map.auto-zoom pre,
+    .code-animation-slide.code-step-6 .code-map.auto-zoom pre {
+      --code-scale: 1.22;
     }
 
-    .code-animation-slide.code-step-6 .code-map.auto-zoom pre,
-    .code-animation-slide.code-step-7 .code-map.auto-zoom pre {
-      --code-scale: 1.16;
+    .code-animation-slide.code-step-7 .code-map.auto-zoom pre,
+    .code-animation-slide.code-step-8 .code-map.auto-zoom pre,
+    .code-animation-slide.code-step-9 .code-map.auto-zoom pre {
+      --code-scale: 1.18;
     }
 
     .code-section {
@@ -1754,9 +1756,11 @@
     .code-animation-slide.code-step-2 .code-functions-a,
     .code-animation-slide.code-step-3 .code-volatility,
     .code-animation-slide.code-step-4 .code-sharpe,
-    .code-animation-slide.code-step-5 .code-loop,
-    .code-animation-slide.code-step-6 .code-result-a,
-    .code-animation-slide.code-step-7 .code-result-b {
+    .code-animation-slide.code-step-5 .code-loop-a,
+    .code-animation-slide.code-step-6 .code-loop-b,
+    .code-animation-slide.code-step-7 .code-result-a,
+    .code-animation-slide.code-step-8 .code-result-b,
+    .code-animation-slide.code-step-9 .code-convergence {
       opacity: 1;
       background: rgba(37, 99, 235, 0.24);
       box-shadow: inset 5px 0 0 #60a5fa, 0 0 0 1px rgba(96, 165, 250, 0.24);
@@ -1782,7 +1786,9 @@
     .code-animation-slide.code-step-4 .code-step:nth-child(5),
     .code-animation-slide.code-step-5 .code-step:nth-child(6),
     .code-animation-slide.code-step-6 .code-step:nth-child(7),
-    .code-animation-slide.code-step-7 .code-step:nth-child(8) {
+    .code-animation-slide.code-step-7 .code-step:nth-child(8),
+    .code-animation-slide.code-step-8 .code-step:nth-child(9),
+    .code-animation-slide.code-step-9 .code-step:nth-child(10) {
       opacity: 1;
       transform: translateY(-50%);
     }
@@ -3072,98 +3078,89 @@
 
       <div class="content code-tour single">
         <div class="code-map auto-zoom">
-<pre><span class="code-section code-data">import yfinance as yf
-import random
-import math
-import matplotlib.pyplot as plt
+<pre><span class="code-section code-data">import yfinance as yf # 주식 데이터를 가져오는 라이브러리
+import random # 무작위 숫자를 생성하는 라이브러리
+import math # 수학 함수 라이브러리
+import matplotlib.pyplot as plt # 그래프를 그려주는 라이브러리
 import matplotlib
 
 # 재현성을 위한 seed 설정
 # 같은 코드와 같은 데이터에서는 항상 같은 시뮬레이션 결과가 나오도록 함
-random.seed(67)
+random.seed(42)
 
 # 분석할 한국 주식 종목과 티커(종목코드) 목록
 # .KS = 코스피 종목
 tickers = {
-    "삼성전자": "005930.KS",
-    "SK하이닉스": "000660.KS",
-    "KODEX200": "069500.KS",
-    "카카오": "035720.KS",
+    &quot;삼성전자&quot;: &quot;005930.KS&quot;,
+    &quot;SK하이닉스&quot;: &quot;000660.KS&quot;,
+    &quot;KODEX200&quot;: &quot;069500.KS&quot;,
+    &quot;카카오&quot;: &quot;035720.KS&quot;,
 }
 
-ticker_list = list(tickers.values())   # ["005930.KS", "000660.KS", ...]
-name_list   = list(tickers.keys())     # ["삼성전자", "SK하이닉스", ...]
+ticker_list = list(tickers.values())   # yifinance에 넘겨줄 티거 코드 리스트
+name_list   = list(tickers.keys())     # 결과 출력용 종목 리스트
 
 # yfinance로 2년치 주가 데이터 다운로드
-raw_data = yf.download(ticker_list, start="2022-01-01", end="2024-12-31", auto_adjust=True)
-price_data = raw_data["Close"]         # 종가(Close)만 사용
+raw_data = yf.download(ticker_list, start=&quot;2022-01-01&quot;, end=&quot;2024-12-31&quot;, auto_adjust=True)
+price_data = raw_data[&quot;Close&quot;]         # 종가(Close)만 사용
 
 # 일일 수익률 = (오늘 가격 - 어제 가격) / 어제 가격
-# pct_change()가 이 계산을 자동으로 해줍니다
-returns = price_data.pct_change().dropna()
+returns = price_data.pct_change().dropna() # 전날 대비 변화율을 자동으로 계산
 
-print(returns.tail(3))
-
+print(returns.tail(3)) # 확인용
 </span><span class="code-section code-functions-a">def get_random_weights(n):
-    """
+    &quot;&quot;&quot;
     n개의 종목에 무작위로 비중을 배분하는 함수
     예) n=4이면 [0.3, 0.2, 0.4, 0.1] 같은 리스트 반환
     모든 비중의 합은 반드시 1.0 (100%)이 됩니다
-    """
-    # 무작위 숫자 n개를 만들고
-    raw = [random.random() for _ in range(n)]
-    # 전체 합으로 나눠서 비율로 바꿉니다
-    total = sum(raw)
-    weights = [w / total for w in raw]
+    &quot;&quot;&quot;
+    raw = [random.random() for _ in range(n)] # 0~1사이 난수 n개 생성
+    total = sum(raw)  #전체 합 계산
+    weights = [w / total for w in raw] # 전체 합으로 각 값을 나눠 비중 계산
     return weights
 
 
 def calc_portfolio_return(weights, returns_df, ticker_list):
-    """
+    &quot;&quot;&quot;
     주어진 비중(weights)으로 포트폴리오의 연간 예상 수익률 계산
-    수익률 = 각 종목의 평균 일일수익률 × 비중 × 252 (1년 거래일수)
-    """
+    수익률 = 각 종목의 평균 일일수익률 &#215; 비중 &#215; 252 (1년 거래일수)
+    &quot;&quot;&quot;
     portfolio_return = 0
     for i, ticker in enumerate(ticker_list):
-        mean_daily_return = returns_df[ticker].mean()   # 종목의 평균 일일 수익률
-        portfolio_return += mean_daily_return * weights[i]
+        mean_daily_return = returns_df[ticker].mean()   # 종목의 일별 수익률 평균값 계산
+        portfolio_return += mean_daily_return * weights[i] #수익률*비중-&gt;포트폴리오 수익률 계산
     portfolio_return *= 252   # 연간 수익률로 환산
-    return portfolio_return
-
+    return portfolio_return  # 계산된 연간 수
 
 </span><span class="code-section code-volatility">def calc_portfolio_volatility(weights, returns_df, ticker_list):
-    """
-    주어진 비중으로 포트폴리오의 연간 변동성(리스크) 계산
-    변동성이 클수록 주가가 들쭉날쭉하다는 뜻 = 위험이 크다
-    """
+    &quot;&quot;&quot;
+     종목 간 공분산까지 반영하여 트폴리오의 연간 변동성(위험) 계산
+    &quot;&quot;&quot;
     n = len(ticker_list)
-    variance = 0.0
+    variance = 0.0 # 분산을 0에서 시작해 누적
 
     for i in range(n):
         for j in range(n):
-            # 두 종목 간의 공분산(함께 움직이는 정도) 계산
+            # 두 종목 간의 공분산 계산
             cov = returns_df[ticker_list[i]].cov(returns_df[ticker_list[j]])
-            variance += weights[i] * weights[j] * cov
+            variance += weights[i] * weights[j] * cov # 비중 &#215; 비중 &#215; 공분산을 누적
 
     variance *= 252                    # 연간 변동성으로 환산
-    volatility = math.sqrt(variance)   # 표준편차 = 변동성
+    volatility = math.sqrt(variance)   # 제곱급 씌워 -&gt; 표준편차 = 변동성로 변환
     return volatility
-
-
 </span><span class="code-section code-sharpe">def calc_sharpe_ratio(portfolio_return, volatility, risk_free_rate=0.03):
-    """
+    &quot;&quot;&quot;
     샤프지수 계산
     샤프지수 = (포트폴리오 수익률 - 무위험 수익률) / 변동성
 
     무위험 수익률: 위험 없이 얻을 수 있는 수익률 (예: 국채 금리)
     샤프지수가 높을수록 위험 대비 수익이 좋다는 뜻!
-    """
+    &quot;&quot;&quot;
     if volatility == 0:
         return 0
     sharpe = (portfolio_return - risk_free_rate) / volatility
     return sharpe
-
-</span><span class="code-section code-loop">NUM_SIMULATIONS = 10000   # 시뮬레이션 횟수 (많을수록 정확하지만 느려짐)
+</span><span class="code-section code-loop-a">NUM_SIMULATIONS = 10000   # 시뮬레이션 횟수 (많을수록 정확하지만 느려짐)
 n_assets = len(ticker_list)
 
 # 결과를 저장할 빈 리스트들
@@ -3172,54 +3169,57 @@ all_volatility  = []   # 각 시도의 변동성
 all_sharpe      = []   # 각 시도의 샤프지수
 all_weights     = []   # 각 시도의 비중
 
-for i in range(NUM_SIMULATIONS):
-    # ① 무작위 비중 생성
-    weights = get_random_weights(n_assets)
+# 샤프지수 갱신 추적을 위한 리스트
+sharpe_history_iterations = [] # 몇 번째 시뮬레이션인지 기록
+sharpe_history_max_sharpe = [] # 그 시점까지의 최대 샤프지수 기록
+current_max_sharpe = -float(&#39;inf&#39;) # 현재 최대 샤프지수 (-무한대로 초기화 → 첫 값이 무조건 갱신되도록)
 
-    # ② 수익률, 변동성, 샤프지수 계산
-    ret = calc_portfolio_return(weights, returns, ticker_list)
-    vol = calc_portfolio_volatility(weights, returns, ticker_list)
-    sharpe = calc_sharpe_ratio(ret, vol)
+update_interval = max(1, NUM_SIMULATIONS // 100) # 업데이트 간격 설정 (예: 100번 시뮬레이션마다 기록)
+</span><span class="code-section code-loop-b">for i in range(NUM_SIMULATIONS):
+    weights = get_random_weights(n_assets)                    # 무작위 비중 생성
+    ret     = calc_portfolio_return(weights, returns, ticker_list)    # 수익률 계산
+    vol     = calc_portfolio_volatility(weights, returns, ticker_list)  # 변동성 계산
+    sharpe  = calc_sharpe_ratio(ret, vol)                     # 샤프지수 계산
 
-    # ③ 결과 저장
-    all_returns.append(ret)
+    all_returns.append(ret)        # 결과 저장
     all_volatility.append(vol)
     all_sharpe.append(sharpe)
     all_weights.append(weights)
 
-    # 진행 상황 출력 (2000번마다)
-    if (i + 1) % 2000 == 0:
-        print(f"  {i + 1}/{NUM_SIMULATIONS}")
+    if sharpe &gt; current_max_sharpe:   # 현재 샤프지수가 기존 최대보다 크면
+        current_max_sharpe = sharpe   # 최대값 갱신
 
-</span><span class="code-section code-result-a"># 샤프지수가 가장 높은 포트폴리오 찾기
-max_sharpe_idx = all_sharpe.index(max(all_sharpe))
-max_sharpe_weights = all_weights[max_sharpe_idx]
-max_sharpe_return  = all_returns[max_sharpe_idx]
-max_sharpe_vol     = all_volatility[max_sharpe_idx]
+    if (i + 1) % update_interval == 0:                        # update_interval 배수마다
+        sharpe_history_iterations.append(i + 1)               # 현재 시뮬레이션 횟수 기록
+        sharpe_history_max_sharpe.append(current_max_sharpe)  # 현재 최대 샤프지수 기록
 
-# 변동성이 가장 낮은 포트폴리오 찾기
-min_vol_idx = all_volatility.index(min(all_volatility))
+    if (i + 1) % 2000 == 0:                         # 2000번마다 진행 상황 출력
+        print(f&quot;  {i + 1}/{NUM_SIMULATIONS}&quot;)
+</span><span class="code-section code-result-a">max_sharpe_idx     = all_sharpe.index(max(all_sharpe))        # 샤프지수가 가장 높은 시뮬레이션 번호
+max_sharpe_weights = all_weights[max_sharpe_idx]              # 해당 시뮬레이션의 비중
+max_sharpe_return  = all_returns[max_sharpe_idx]              # 해당 시뮬레이션의 수익률
+max_sharpe_vol     = all_volatility[max_sharpe_idx]           # 해당 시뮬레이션의 변동성
+
+min_vol_idx     = all_volatility.index(min(all_volatility))   # 변동성이 가장 낮은 시뮬레이션 번호
 min_vol_weights = all_weights[min_vol_idx]
 min_vol_return  = all_returns[min_vol_idx]
 min_vol_vol     = all_volatility[min_vol_idx]
 
-# 결과 출력
-print("\n🔴 [샤프지수 최대 포트폴리오] - 수익 효율이 가장 좋은 조합")
-print(f"   수익률  : {max_sharpe_return * 100:.1f}%")
-print(f"   변동성  : {max_sharpe_vol * 100:.1f}%")
-print(f"   샤프지수: {all_sharpe[max_sharpe_idx]:.2f}")
-print("   비중:")
-for name, w in zip(name_list, max_sharpe_weights):
-    print(f"     - {name}: {w * 100:.1f}%")
+print(&quot;\n🔴 [샤프지수 최대 포트폴리오] - 수익 효율이 가장 좋은 조합&quot;)
+print(f&quot;   수익률  : {max_sharpe_return * 100:.1f}%&quot;)
+print(f&quot;   변동성  : {max_sharpe_vol * 100:.1f}%&quot;)
+print(f&quot;   샤프지수: {all_sharpe[max_sharpe_idx]:.2f}&quot;)
+print(&quot;   비중:&quot;)
+for name, w in zip(name_list, max_sharpe_weights):             # 두 리스트를 쌍으로 묶어 동시에 꺼냄
+    print(f&quot;     - {name}: {w * 100:.1f}%&quot;)
 
-print("\n🔵 [변동성 최소 포트폴리오] - 가장 안정적인 조합")
-print(f"   수익률  : {min_vol_return * 100:.1f}%")
-print(f"   변동성  : {min_vol_vol * 100:.1f}%")
-print(f"   샤프지수: {all_sharpe[min_vol_idx]:.2f}")
-print("   비중:")
+print(&quot;\n🔵 [변동성 최소 포트폴리오] - 가장 안정적인 조합&quot;)
+print(f&quot;   수익률  : {min_vol_return * 100:.1f}%&quot;)
+print(f&quot;   변동성  : {min_vol_vol * 100:.1f}%&quot;)
+print(f&quot;   샤프지수: {all_sharpe[min_vol_idx]:.2f}&quot;)
+print(&quot;   비중:&quot;)
 for name, w in zip(name_list, min_vol_weights):
-    print(f"     - {name}: {w * 100:.1f}%")
-
+    print(f&quot;     - {name}: {w * 100:.1f}%&quot;)
 </span><span class="code-section code-result-b">plt.figure(figsize=(10, 6))
 
 # 모든 포트폴리오를 점으로 표시 (색상 = 샤프지수)
@@ -3227,25 +3227,37 @@ scatter = plt.scatter(
     all_volatility,
     all_returns,
     c=all_sharpe,
-    cmap="viridis",
+    cmap=&quot;viridis&quot;,
     alpha=0.5,
     s=5
 )
-plt.colorbar(scatter, label="Sharpe Ratio")
+plt.colorbar(scatter, label=&quot;Sharpe Ratio&quot;)
 
 # 최적 포트폴리오 강조 표시
 plt.scatter(max_sharpe_vol, max_sharpe_return,
-            color="red", marker="*", s=300, label="Max Sharpe Ratio", zorder=5)
+            color=&quot;red&quot;, marker=&quot;*&quot;, s=300, label=&quot;Max Sharpe Ratio&quot;, zorder=5)
 plt.scatter(min_vol_vol, min_vol_return,
-            color="blue", marker="*", s=300, label="Min Volatility", zorder=5)
+            color=&quot;blue&quot;, marker=&quot;*&quot;, s=300, label=&quot;Min Volatility&quot;, zorder=5)
 
-plt.title("Monte Carlo Simulation - Efficient Frontier", fontsize=14)
-plt.xlabel("Volatility (Risk)")
-plt.ylabel("Expected Return")
+plt.title(&quot;Monte Carlo Simulation - Efficient Frontier&quot;, fontsize=14)
+plt.xlabel(&quot;Volatility (Risk)&quot;)
+plt.ylabel(&quot;Expected Return&quot;)
 plt.legend()
 plt.tight_layout()
-plt.savefig("monte_carlo_result.png", dpi=150)
-plt.show()</span></pre>
+plt.savefig(&quot;monte_carlo_result.png&quot;, dpi=150)
+plt.show()
+</span><span class="code-section code-convergence">##수렴검증
+
+plt.figure(figsize=(12, 6)) #그래프 크기 설정
+plt.plot(sharpe_history_iterations, sharpe_history_max_sharpe, color=&#39;purple&#39;, linewidth=2) # y축 : 최대 샤프지수
+plt.title(&#39;Maximum Sharpe Ratio Evolution Over Simulations&#39;, fontsize=14) # 그래프 제목
+plt.xlabel(&#39;Number of Simulations&#39;, fontsize=12) # x축 이름: 시뮬레이션 횟수
+plt.ylabel(&#39;Maximum Sharpe Ratio&#39;, fontsize=12) # y축 이름: 최대 샤프지수
+plt.grid(True, linestyle=&#39;--&#39;, alpha=0.7)
+plt.tight_layout()
+plt.savefig(&quot;max_sharpe_evolution.png&quot;, dpi=150)
+plt.show()
+</span></pre>
         </div>
 
         <div class="code-stage-notes">
@@ -3296,14 +3308,23 @@ plt.show()</span></pre>
 
           <div class="code-step" style="--step-delay: 25.4s;">
             <div class="card dark-blue">
-              <h3>반복 시뮬레이션</h3>
+              <h3>반복 준비</h3>
               <p class="small" style="color: rgba(255,255,255,0.84); margin-top:14px;">
-                10,000번 동안 무작위 비중을 만들고, 각 포트폴리오의 성과 지표를 저장한다.
+                시뮬레이션 횟수와 결과 저장 리스트를 만들고, 최고 샤프지수 추적 변수를 준비한다.
               </p>
             </div>
           </div>
 
           <div class="code-step" style="--step-delay: 30.6s;">
+            <div class="card dark-blue">
+              <h3>반복 실행</h3>
+              <p class="small" style="color: rgba(255,255,255,0.84); margin-top:14px;">
+                10,000번 동안 무작위 비중을 만들고, 수익률·변동성·샤프지수와 최고값 변화를 저장한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 35.8s;">
             <div class="card">
               <h3>최적 조합 출력</h3>
               <p class="small" style="margin-top:14px;">
@@ -3312,11 +3333,20 @@ plt.show()</span></pre>
             </div>
           </div>
 
-          <div class="code-step" style="--step-delay: 35.8s;">
+          <div class="code-step" style="--step-delay: 41s;">
             <div class="card">
               <h3>그래프 시각화</h3>
               <p class="small" style="margin-top:14px;">
                 모든 후보 포트폴리오를 산점도로 표시하고, 최적 조합을 별표로 강조한다.
+              </p>
+            </div>
+          </div>
+
+          <div class="code-step" style="--step-delay: 46.2s;">
+            <div class="card">
+              <h3>수렴 검증</h3>
+              <p class="small" style="margin-top:14px;">
+                시행 횟수별 최고 샤프지수 변화를 선 그래프로 저장해 결과가 안정화되는지 확인한다.
               </p>
             </div>
           </div>
@@ -3967,7 +3997,7 @@ plt.show()</span></pre>
     const presentationStage = document.getElementById("presentationStage");
 
     let currentIndex = 0;
-      const maxCodeStep = 7;
+      const maxCodeStep = 9;
 
     function fitDeck() {
       if (!presentationStage) return;
@@ -4058,7 +4088,7 @@ plt.show()</span></pre>
     function setCodeStep(slide, step) {
       const safeStep = Math.max(0, Math.min(step, maxCodeStep));
 
-      slide.classList.remove("code-step-0", "code-step-1", "code-step-2", "code-step-3", "code-step-4", "code-step-5", "code-step-6", "code-step-7");
+      slide.classList.remove("code-step-0", "code-step-1", "code-step-2", "code-step-3", "code-step-4", "code-step-5", "code-step-6", "code-step-7", "code-step-8", "code-step-9");
       slide.classList.add(`code-step-${safeStep}`);
       slide.dataset.codeStep = String(safeStep);
       focusCodeSection(slide, safeStep);
@@ -4070,12 +4100,29 @@ plt.show()</span></pre>
 
       if (!pre || !map) return;
 
+      pre.style.removeProperty("--code-scale");
+
       if (step === 0) {
-        pre.style.removeProperty("--code-pan");
+        const updateOverviewScale = () => {
+          if (slide.dataset.codeStep !== "0") return;
+
+          pre.style.removeProperty("--code-pan");
+
+          const maxScale = 0.56;
+          const minScale = 0.22;
+          const availableHeight = Math.max(1, map.clientHeight - 24);
+          const codeHeight = Math.max(1, pre.scrollHeight);
+          const overviewScale = Math.max(minScale, Math.min(maxScale, availableHeight / codeHeight));
+
+          pre.style.setProperty("--code-overview-scale", overviewScale.toFixed(3));
+        };
+
+        requestAnimationFrame(updateOverviewScale);
+        window.setTimeout(updateOverviewScale, 760);
         return;
       }
 
-      const targets = ["", ".code-data", ".code-functions-a", ".code-volatility", ".code-sharpe", ".code-loop", ".code-result-a", ".code-result-b"];
+      const targets = ["", ".code-data", ".code-functions-a", ".code-volatility", ".code-sharpe", ".code-loop-a", ".code-loop-b", ".code-result-a", ".code-result-b", ".code-convergence"];
       const selector = targets[step];
 
       const updatePan = () => {
@@ -4084,16 +4131,20 @@ plt.show()</span></pre>
         const target = slide.querySelector(selector);
         if (!target) return;
 
-        const scale = parseFloat(getComputedStyle(pre).getPropertyValue("--code-scale")) || 1;
         const mapHeight = map.clientHeight;
         const targetTop = target.offsetTop;
+        const desiredScale = parseFloat(getComputedStyle(pre).getPropertyValue("--code-scale")) || 1;
+        const maxTargetHeight = mapHeight * 0.90;
+        const fitScale = Math.min(desiredScale, maxTargetHeight / Math.max(1, target.offsetHeight));
+        const scale = Math.max(0.78, fitScale);
         const targetHeight = target.offsetHeight * scale;
-        const targetFits = targetHeight < mapHeight * 0.78;
+        const targetFits = targetHeight < mapHeight * 0.90;
         const preferredTop = targetFits
-          ? Math.max(28, (mapHeight - targetHeight) / 2)
-          : 34;
+          ? Math.max(24, (mapHeight - targetHeight) / 2)
+          : 28;
         const pan = preferredTop - targetTop * scale;
 
+        pre.style.setProperty("--code-scale", scale.toFixed(3));
         pre.style.setProperty("--code-pan", `${Math.round(pan)}px`);
       };
 

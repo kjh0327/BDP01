@@ -36,12 +36,16 @@
       --radius-xl: 34px;
       --radius-lg: 24px;
       --radius-md: 16px;
-      --slide-pad: clamp(48px, 5vw, 82px);
-      --title-size: clamp(48px, 5.6vw, 82px);
-      --h2-size: clamp(36px, 4vw, 58px);
-      --body-size: clamp(22px, 2vw, 30px);
-      --small-size: clamp(17px, 1.45vw, 22px);
-      --tiny-size: clamp(14px, 1vw, 17px);
+      --stage-unit: min(1vw, 1.7778vh);
+      --nav-safe: clamp(64px, calc(var(--stage-unit) * 4.2), 82px);
+      --slide-pad-x: clamp(42px, calc(var(--stage-unit) * 4.6), 82px);
+      --slide-pad-y: clamp(30px, calc(var(--stage-unit) * 3.35), 64px);
+      --slide-pad: var(--slide-pad-x);
+      --title-size: clamp(44px, calc(var(--stage-unit) * 5.4), 82px);
+      --h2-size: clamp(34px, calc(var(--stage-unit) * 3.8), 58px);
+      --body-size: clamp(20px, calc(var(--stage-unit) * 1.55), 30px);
+      --small-size: clamp(16px, calc(var(--stage-unit) * 1.15), 22px);
+      --tiny-size: clamp(13px, calc(var(--stage-unit) * 0.9), 17px);
       --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     }
 
@@ -61,6 +65,8 @@
       overflow: hidden;
       font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
       color: var(--ink);
+      display: grid;
+      place-items: center;
       background:
         radial-gradient(circle at 8% 10%, rgba(38, 86, 217, 0.13), transparent 34%),
         radial-gradient(circle at 90% 18%, rgba(14, 165, 168, 0.12), transparent 30%),
@@ -69,8 +75,9 @@
 
     .deck {
       position: relative;
-      width: 100vw;
-      height: 100vh;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      aspect-ratio: 16 / 9;
       overflow: hidden;
     }
 
@@ -79,10 +86,10 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      padding: var(--slide-pad);
+      padding: var(--slide-pad-y) var(--slide-pad-x) calc(var(--slide-pad-y) + var(--nav-safe)) var(--slide-pad-x);
       display: grid;
       grid-template-rows: auto 1fr;
-      gap: 30px;
+      gap: clamp(18px, calc(var(--stage-unit) * 1.35), 30px);
       opacity: 0;
       visibility: hidden;
       transform: translateX(36px) scale(0.985);
@@ -1895,6 +1902,59 @@
       font-size: 24px;
     }
 
+    .closing-slide .content {
+      align-items: stretch;
+      gap: clamp(16px, calc(var(--stage-unit) * 1.25), 24px);
+    }
+
+    .closing-slide .two-col.wide-left {
+      grid-template-columns: 0.96fr 1.04fr;
+    }
+
+    .closing-slide .card {
+      padding: clamp(20px, calc(var(--stage-unit) * 1.65), 30px);
+    }
+
+    .closing-slide .card.flat {
+      padding: clamp(16px, calc(var(--stage-unit) * 1.2), 22px) clamp(20px, calc(var(--stage-unit) * 1.45), 28px) !important;
+    }
+
+    .closing-slide .dark-blue .lead,
+    .closing-slide .card.flat .lead {
+      max-width: none;
+      font-size: clamp(19px, calc(var(--stage-unit) * 1.35), 27px);
+      line-height: 1.38;
+    }
+
+    .closing-slide .check-list {
+      margin-top: clamp(14px, calc(var(--stage-unit) * 1), 20px) !important;
+      gap: clamp(10px, calc(var(--stage-unit) * 0.7), 14px);
+    }
+
+    .closing-slide .check-item {
+      grid-template-columns: 38px 1fr;
+      gap: 12px;
+      padding: clamp(12px, calc(var(--stage-unit) * 0.9), 16px) clamp(14px, calc(var(--stage-unit) * 1), 18px);
+      border-radius: 16px;
+    }
+
+    .closing-slide .check-mark,
+    .closing-slide .warning-mark {
+      width: 38px;
+      height: 38px;
+      font-size: 22px;
+    }
+
+    .closing-slide .check-item h3 {
+      font-size: clamp(21px, calc(var(--stage-unit) * 1.55), 30px);
+      line-height: 1.12;
+    }
+
+    .closing-slide .check-item .small {
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
     .loss-zone {
       margin-top: 24px;
       padding: 28px;
@@ -2230,7 +2290,7 @@
     .nav-ui {
       position: fixed;
       left: 50%;
-      bottom: 22px;
+      bottom: max(14px, env(safe-area-inset-bottom));
       transform: translateX(-50%);
       z-index: 20;
       width: min(1180px, calc(100vw - 44px));
@@ -2340,7 +2400,10 @@
       ========================================================= */
     @media (max-width: 980px) {
       :root {
-        --slide-pad: 34px;
+        --slide-pad-x: 34px;
+        --slide-pad-y: 28px;
+        --slide-pad: var(--slide-pad-x);
+        --nav-safe: 74px;
       }
 
       .two-col,
@@ -2410,6 +2473,10 @@
       .dots {
         max-width: 92vw;
         overflow: hidden;
+      }
+
+      .closing-slide .two-col.wide-left {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -3798,7 +3865,7 @@ plt.show()</span></pre>
       - 이 주석 아래의 <section> 전체가 28번 슬라이드 내용입니다.
       - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
       ========================================================= -->
-    <section class="slide" data-slide="24">
+    <section class="slide closing-slide" data-slide="24">
       <div class="slide-header">
         <div>
           <div class="kicker">결론 및 시사점</div>

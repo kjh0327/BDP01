@@ -36,16 +36,12 @@
       --radius-xl: 34px;
       --radius-lg: 24px;
       --radius-md: 16px;
-      --stage-unit: min(1vw, 1.7778vh);
-      --nav-safe: clamp(64px, calc(var(--stage-unit) * 4.2), 82px);
-      --slide-pad-x: clamp(42px, calc(var(--stage-unit) * 4.6), 82px);
-      --slide-pad-y: clamp(30px, calc(var(--stage-unit) * 3.35), 64px);
-      --slide-pad: var(--slide-pad-x);
-      --title-size: clamp(44px, calc(var(--stage-unit) * 5.4), 82px);
-      --h2-size: clamp(34px, calc(var(--stage-unit) * 3.8), 58px);
-      --body-size: clamp(20px, calc(var(--stage-unit) * 1.55), 30px);
-      --small-size: clamp(16px, calc(var(--stage-unit) * 1.15), 22px);
-      --tiny-size: clamp(13px, calc(var(--stage-unit) * 0.9), 17px);
+      --slide-pad: clamp(48px, 5vw, 82px);
+      --title-size: clamp(48px, 5.6vw, 82px);
+      --h2-size: clamp(36px, 4vw, 58px);
+      --body-size: clamp(22px, 2vw, 30px);
+      --small-size: clamp(17px, 1.45vw, 22px);
+      --tiny-size: clamp(14px, 1vw, 17px);
       --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     }
 
@@ -65,19 +61,45 @@
       overflow: hidden;
       font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
       color: var(--ink);
-      display: grid;
-      place-items: center;
       background:
         radial-gradient(circle at 8% 10%, rgba(38, 86, 217, 0.13), transparent 34%),
         radial-gradient(circle at 90% 18%, rgba(14, 165, 168, 0.12), transparent 30%),
         linear-gradient(135deg, #f8fbff 0%, #eef3fb 100%);
     }
 
+    .presentation-viewport {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .presentation-stage {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      flex: 0 0 auto;
+      overflow: visible;
+      transform-origin: center center;
+    }
+
+    .presentation-native {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      transform: scale(0.6666667);
+      transform-origin: top left;
+    }
+
     .deck {
       position: relative;
-      width: min(100vw, calc(100vh * 16 / 9));
-      height: min(100vh, calc(100vw * 9 / 16));
-      aspect-ratio: 16 / 9;
+      width: 1920px;
+      height: 1080px;
       overflow: hidden;
     }
 
@@ -86,10 +108,10 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      padding: var(--slide-pad-y) var(--slide-pad-x) calc(var(--slide-pad-y) + var(--nav-safe)) var(--slide-pad-x);
+      padding: var(--slide-pad);
       display: grid;
       grid-template-rows: auto 1fr;
-      gap: clamp(18px, calc(var(--stage-unit) * 1.35), 30px);
+      gap: 30px;
       opacity: 0;
       visibility: hidden;
       transform: translateX(36px) scale(0.985);
@@ -1902,59 +1924,6 @@
       font-size: 24px;
     }
 
-    .closing-slide .content {
-      align-items: stretch;
-      gap: clamp(16px, calc(var(--stage-unit) * 1.25), 24px);
-    }
-
-    .closing-slide .two-col.wide-left {
-      grid-template-columns: 0.96fr 1.04fr;
-    }
-
-    .closing-slide .card {
-      padding: clamp(20px, calc(var(--stage-unit) * 1.65), 30px);
-    }
-
-    .closing-slide .card.flat {
-      padding: clamp(16px, calc(var(--stage-unit) * 1.2), 22px) clamp(20px, calc(var(--stage-unit) * 1.45), 28px) !important;
-    }
-
-    .closing-slide .dark-blue .lead,
-    .closing-slide .card.flat .lead {
-      max-width: none;
-      font-size: clamp(19px, calc(var(--stage-unit) * 1.35), 27px);
-      line-height: 1.38;
-    }
-
-    .closing-slide .check-list {
-      margin-top: clamp(14px, calc(var(--stage-unit) * 1), 20px) !important;
-      gap: clamp(10px, calc(var(--stage-unit) * 0.7), 14px);
-    }
-
-    .closing-slide .check-item {
-      grid-template-columns: 38px 1fr;
-      gap: 12px;
-      padding: clamp(12px, calc(var(--stage-unit) * 0.9), 16px) clamp(14px, calc(var(--stage-unit) * 1), 18px);
-      border-radius: 16px;
-    }
-
-    .closing-slide .check-mark,
-    .closing-slide .warning-mark {
-      width: 38px;
-      height: 38px;
-      font-size: 22px;
-    }
-
-    .closing-slide .check-item h3 {
-      font-size: clamp(21px, calc(var(--stage-unit) * 1.55), 30px);
-      line-height: 1.12;
-    }
-
-    .closing-slide .check-item .small {
-      margin-top: 6px;
-      line-height: 1.35;
-    }
-
     .loss-zone {
       margin-top: 24px;
       padding: 28px;
@@ -2288,9 +2257,9 @@
       - 방향키, 버튼, 진행 점 클릭, 전체화면 버튼을 지원합니다.
       ========================================================= */
     .nav-ui {
-      position: fixed;
+      position: absolute;
       left: 50%;
-      bottom: max(14px, env(safe-area-inset-bottom));
+      bottom: 22px;
       transform: translateX(-50%);
       z-index: 20;
       width: min(1180px, calc(100vw - 44px));
@@ -2378,7 +2347,7 @@
     }
 
     .progress-bar {
-      position: fixed;
+      position: absolute;
       left: 0;
       bottom: 0;
       height: 6px;
@@ -2400,10 +2369,7 @@
       ========================================================= */
     @media (max-width: 980px) {
       :root {
-        --slide-pad-x: 34px;
-        --slide-pad-y: 28px;
-        --slide-pad: var(--slide-pad-x);
-        --nav-safe: 74px;
+        --slide-pad: 34px;
       }
 
       .two-col,
@@ -2475,14 +2441,14 @@
         overflow: hidden;
       }
 
-      .closing-slide .two-col.wide-left {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
 
 <body>
+  <div class="presentation-viewport">
+    <div class="presentation-stage" id="presentationStage">
+      <div class="presentation-native">
   <main class="deck" id="deck" aria-label="몬테카를로 시뮬레이션 HTML 발표자료">
 
     <!-- =========================================================
@@ -3662,56 +3628,6 @@ plt.show()</span></pre>
     </section>
 
     <!-- =========================================================
-      SLIDE 23. 샤프지수 해석
-      ========================================================= -->
-    <!-- =========================================================
-      SLIDE 23. 여기부터 23번 슬라이드입니다.
-      - 이 주석 아래의 <section> 전체가 15번 슬라이드 내용입니다.
-      - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
-      ========================================================= -->
-    <section class="slide" data-slide="21">
-      <div class="slide-header">
-        <div>
-          <div class="kicker">샤프지수 해석 기준</div>
-          <h2>샤프지수</h2>
-        </div>
-      </div>
-
-      <div class="content two-col wide-right">
-        <div class="card">
-          <h3>예시 해석</h3>
-          <p class="body" style="margin-top:20px;">
-            샤프지수가 높다는 것은 같은 위험을 감수했을 때
-            <span class="highlight">더 높은 초과수익</span>을 얻는다는 뜻이다.
-          </p>
-
-          <div class="loss-zone">
-            <p class="body">
-              노트북은 10,000개의 무작위 포트폴리오 중<br />
-              <b>샤프지수 최대 조합</b>과 <b>변동성 최소 조합</b>을 따로 찾는다.
-            </p>
-            <div class="loss-scale">
-              <span>낮은 효율</span>
-              <span>샤프지수</span>
-              <span>높은 효율</span>
-            </div>
-          </div>
-
-          <p class="small" style="margin-top:22px;">
-            이번 결과에서는 샤프지수 최대 조합이 SK하이닉스 중심으로 나타났고,
-            변동성 최소 조합은 KODEX200 중심으로 나타났다.
-          </p>
-        </div>
-
-        <div>
-          <div class="chart-shell tall">
-            <canvas id="varChart" aria-label="포트폴리오 샤프지수 비교 차트"></canvas>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- =========================================================
       SLIDE 24. 수렴 검증
       ========================================================= -->
     <!-- =========================================================
@@ -3719,7 +3635,7 @@ plt.show()</span></pre>
       - 이 주석 아래의 <section> 전체가 16번 슬라이드 내용입니다.
       - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
       ========================================================= -->
-    <section class="slide convergence-slide" data-slide="22">
+    <section class="slide convergence-slide" data-slide="21">
       <div class="slide-header">
         <div>
           <div class="kicker">수렴 여부 검증</div>
@@ -3792,7 +3708,7 @@ plt.show()</span></pre>
       - 이 주석 아래의 <section> 전체가 19번 슬라이드 내용입니다.
       - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
       ========================================================= -->
-    <section class="slide" data-slide="23">
+    <section class="slide" data-slide="22">
       <div class="slide-header">
         <div>
           <div class="kicker">모델의 한계</div>
@@ -3865,7 +3781,7 @@ plt.show()</span></pre>
       - 이 주석 아래의 <section> 전체가 28번 슬라이드 내용입니다.
       - 다음 SLIDE 주석이 나오기 전까지 수정하면 됩니다.
       ========================================================= -->
-    <section class="slide closing-slide" data-slide="24">
+    <section class="slide" data-slide="23">
       <div class="slide-header">
         <div>
           <div class="kicker">결론 및 시사점</div>
@@ -4024,12 +3940,15 @@ plt.show()</span></pre>
     <div class="dots" id="dots" aria-label="슬라이드 진행 표시"></div>
 
     <div class="counter">
-      <span id="currentSlide">1</span> / <span id="totalSlides">24</span>
+      <span id="currentSlide">1</span> / <span id="totalSlides">23</span>
     </div>
   </div>
 
   <div class="progress-bar" aria-hidden="true">
     <div class="progress-fill" id="progressFill"></div>
+  </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -4045,9 +3964,29 @@ plt.show()</span></pre>
     const currentSlideEl = document.getElementById("currentSlide");
     const totalSlidesEl = document.getElementById("totalSlides");
     const progressFill = document.getElementById("progressFill");
+    const presentationStage = document.getElementById("presentationStage");
 
     let currentIndex = 0;
       const maxCodeStep = 7;
+
+    function fitDeck() {
+      if (!presentationStage) return;
+
+      const baseWidth = 1280;
+      const baseHeight = 720;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const scale = Math.min(viewportWidth / baseWidth, viewportHeight / baseHeight);
+
+      presentationStage.style.transform = `scale(${scale})`;
+      presentationStage.style.transformOrigin = "center center";
+    }
+
+    window.addEventListener("load", fitDeck);
+    window.addEventListener("resize", fitDeck);
+    window.addEventListener("orientationchange", fitDeck);
+    document.addEventListener("fullscreenchange", fitDeck);
+    fitDeck();
 
     totalSlidesEl.textContent = slides.length;
 
@@ -4599,50 +4538,6 @@ plt.show()</span></pre>
         })
       });
       }
-
-      /* 샤프지수 비교 차트 */
-      const varLabels = ["샤프 최대", "변동성 최소"];
-      const varCounts = [0.37, -0.38];
-
-      new Chart(document.getElementById("varChart"), {
-        type: "bar",
-        data: {
-          labels: varLabels,
-          datasets: [{
-            label: "샤프지수",
-            data: varCounts,
-            backgroundColor: ["rgba(239, 68, 68, 0.72)", "rgba(29, 78, 216, 0.66)"],
-            borderColor: ["#ef4444", "#1d4ed8"],
-            borderWidth: 1,
-            borderRadius: 8
-          }]
-        },
-        options: baseChartOptions({
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: "포트폴리오 유형별 샤프지수 비교",
-              font: { ...chartFont, size: 18 },
-              color: "#14213d"
-            }
-          },
-          scales: {
-            x: {
-              title: { display: true, text: "포트폴리오 선택 기준", color: chartTickColor, font: chartFont },
-              grid: { display: false },
-              ticks: { color: chartTickColor, font: chartFont }
-            },
-            y: {
-              min: -0.45,
-              max: 0.45,
-              title: { display: true, text: "샤프지수", color: chartTickColor, font: chartFont },
-              grid: { color: chartGridColor },
-              ticks: { color: chartTickColor, font: chartFont }
-            }
-          }
-        })
-      });
 
       /* 수렴 차트 */
       const maxSharpeEvolution = [
